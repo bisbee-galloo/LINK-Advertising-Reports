@@ -1049,6 +1049,19 @@ const CONFIG_FIELD_MAP = {
 };
 
 // ── FETCH CONFIG FROM SHEET ──
+
+// Fields that should be RESOLVED at login (fetch their value now)
+const CONFIG_VALUE_FIELDS = new Set([
+  'name','password','title','period','author1Name','author1Title','author2Name','author2Title','period_text','kpi_tlbl'
+]);
+// Fields that are RANGE REFERENCES — store the range, fetch data later via fetchSheetData
+const CONFIG_MAPPING_FIELDS = new Set([
+  'kpi_clicks','kpi_clicks_trend','kpi_impr','kpi_impr_trend',
+  'kpi_ctr','kpi_ctr_trend','kpi_cpc','kpi_cpc_trend',
+  'kw_range','zip_impr_range','zip_clicks_range',
+  'demo_gender','demo_age','demo_income',
+]);
+
 async function fetchClientConfig(sheetId) {
   if (!sheetsApiKey) throw new Error('No API key configured');
 
@@ -1063,49 +1076,55 @@ async function fetchClientConfig(sheetId) {
   const data = await res.json();
   const rows = data.values || [];
 
-  // Build label → range reference map from A:B
-  // Skip rows where column B is blank, n/a, or not a valid range reference
   const isValidRef = v => v && v.trim() && !['n/a','na','none','-'].includes(v.trim().toLowerCase());
-  const labelToRange = {};
+
+  // Separate into: fields to resolve now vs fields to keep as range references
+  const toResolve = {};   // field → range (will be fetched)
+  const config = { sheetId };
+
   rows.forEach(row => {
     const label = (row[0] || '').trim();
     const ref   = (row[1] || '').trim();
     const field = CONFIG_FIELD_MAP[label];
-    if (field && isValidRef(ref)) labelToRange[field] = ref;
-  });
+    if (!field || !isValidRef(ref)) return;
 
-  if (!Object.keys(labelToRange).length) {
-    throw new Error('No valid config fields found in _config tab');
-  }
-
-  // Step 2: Batch-fetch all the referenced ranges to get actual values
-  const uniqueRanges = [...new Set(Object.values(labelToRange))];
-  const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchGet?${
-    uniqueRanges.map(r => 'ranges=' + encodeURIComponent(r)).join('&')
-  }&key=${sheetsApiKey}`;
-
-  const batchRes = await fetch(batchUrl);
-  if (!batchRes.ok) {
-    const err = await batchRes.json();
-    throw new Error(err.error?.message || 'Failed to fetch config values');
-  }
-  const batchData = await batchRes.json();
-
-  // Build range → first cell value lookup
-  const rangeValues = {};
-  (batchData.valueRanges || []).forEach((vr, i) => {
-    const val = vr.values?.[0]?.[0] ?? '';
-    rangeValues[uniqueRanges[i]] = String(val).trim();
-  });
-
-  // Step 3: Build final config object
-  const config = { sheetId };
-  Object.entries(labelToRange).forEach(([field, ref]) => {
-    const value = rangeValues[ref];
-    if (value && !['n/a','na','none','-'].includes(value.toLowerCase())) {
-      config[field] = value;
+    if (CONFIG_MAPPING_FIELDS.has(field)) {
+      // Store range reference directly — fetchSheetData will use it later
+      config[field] = ref;
+    } else if (CONFIG_VALUE_FIELDS.has(field)) {
+      // Queue for resolution
+      toResolve[field] = ref;
     }
   });
+
+  // Step 2: Batch-fetch only the value fields (name, password, title, etc.)
+  const valueRanges = [...new Set(Object.values(toResolve))];
+  if (valueRanges.length) {
+    const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchGet?${
+      valueRanges.map(r => 'ranges=' + encodeURIComponent(r)).join('&')
+    }&key=${sheetsApiKey}`;
+
+    const batchRes = await fetch(batchUrl);
+    if (!batchRes.ok) {
+      const err = await batchRes.json();
+      throw new Error(err.error?.message || 'Failed to fetch config values');
+    }
+    const batchData = await batchRes.json();
+
+    // Build range → value lookup
+    const rangeValues = {};
+    (batchData.valueRanges || []).forEach((vr, i) => {
+      rangeValues[valueRanges[i]] = String(vr.values?.[0]?.[0] ?? '').trim();
+    });
+
+    // Assign resolved values to config
+    Object.entries(toResolve).forEach(([field, ref]) => {
+      const value = rangeValues[ref];
+      if (value && !['n/a','na','none','-'].includes(value.toLowerCase())) {
+        config[field] = value;
+      }
+    });
+  }
 
   return config;
 }
