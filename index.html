@@ -447,6 +447,108 @@ body::before{
   gap:10px;pointer-events:none;
 }
 
+/* ══════════════════════════════════════
+   MOBILE — TABLET (≤768px)
+══════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Header */
+  .hdr{padding:0 16px;height:60px}
+  .hdr-title{font-size:13px}
+  .hdr-sub{font-size:9px}
+  .logo-box{width:38px;height:38px}
+  .btn{padding:6px 12px;font-size:10px}
+
+  /* Period bar */
+  .pbar{padding:8px 16px;gap:10px;flex-wrap:wrap}
+  .ppill{font-size:10px}
+
+  /* Main layout */
+  .main{padding:16px 16px 40px;gap:20px;max-width:100%}
+
+  /* KPI grid — 2 columns on tablet */
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{height:148px;padding:18px 18px 14px}
+  .kpi-val{font-size:36px}
+
+  /* All 2-col and 3-col grids collapse to 1 column */
+  .row-2{grid-template-columns:1fr}
+  .row-3{grid-template-columns:1fr}
+
+  /* Cards — remove fixed heights, let content breathe */
+  .glass.card[style*="height"],
+  .glass.note-card[style*="height"]{height:auto!important}
+
+  /* Note textareas */
+  .note-textarea{min-height:120px}
+
+  /* Bar lists */
+  .bar-list{min-height:200px}
+
+  /* Maps — handled by toggle (see below) */
+  .map-body{min-height:280px}
+
+  /* Donuts — already collapse via row-3 → 1col */
+  .donut-body{min-height:260px}
+
+  /* Section headers */
+  .sh h2{font-size:10px;letter-spacing:2px}
+
+  /* Footer */
+  .report-footer{padding:20px 16px;gap:16px}
+  .footer-client{font-size:13px}
+}
+
+/* ══════════════════════════════════════
+   MOBILE — PHONE (≤480px)
+══════════════════════════════════════ */
+@media (max-width: 480px) {
+  /* Header — tighter */
+  .hdr{padding:0 12px}
+  .hdr-title{font-size:12px;letter-spacing:-.1px}
+  .btn-ghost{display:none} /* hide Export PDF button, use share instead */
+
+  /* Period bar — hide last-refreshed on small screens */
+  #last-refreshed{display:none}
+
+  /* Main */
+  .main{padding:12px 12px 32px;gap:16px}
+
+  /* KPI grid — 2 columns still fine, shrink values */
+  .kpi{height:132px;padding:14px 14px 12px}
+  .kpi-val{font-size:28px;letter-spacing:-1px}
+  .kpi-tag{font-size:8.5px}
+  .tup,.tdn{font-size:18px}
+
+  /* Donut cards — shrink donut slightly */
+  .dnut-wrap{width:110px;height:110px}
+  .dnut-wrap canvas{width:110px!important;height:110px!important}
+
+  /* Footer */
+  .report-footer{flex-direction:column;align-items:flex-start;gap:12px}
+  .footer-logo{align-self:flex-end}
+}
+
+/* ── MAP TOGGLE (mobile only) ── */
+.map-toggle-bar{
+  display:none;
+  gap:8px;margin-bottom:10px;flex-shrink:0;
+}
+.map-toggle-btn{
+  flex:1;padding:7px 12px;border-radius:7px;font-size:11px;font-weight:700;
+  letter-spacing:.5px;border:1px solid rgba(232,56,45,0.25);
+  background:rgba(255,255,255,0.6);color:var(--text-muted);
+  cursor:pointer;transition:all .2s;font-family:var(--font-primary);
+}
+.map-toggle-btn.active{background:#e8382d;color:white;border-color:#e8382d}
+.map-panel{display:block}
+.map-panel.hidden{display:none}
+
+@media (max-width: 768px) {
+  .map-toggle-bar{display:flex}
+  /* On mobile the two map cards are already stacked (row-2 → 1col).
+     We use JS to show/hide them via .hidden class */
+}
+
 /* Print */
 @media print{
   /* Hide interactive UI */
@@ -667,19 +769,28 @@ body::before{
     <!-- GEOGRAPHIC — MAPS -->
     <div>
       <div class="sh"><div class="sh-bar"></div><h2>Geographic Performance</h2><div class="sh-line"></div></div>
-      <div class="row-2">
-        <div class="glass card" style="height:360px">
-          <div class="ctitle">Ad Impressions By Zip Code (1.1)</div>
-          <div class="map-body map-placeholder" id="map-impressions">
-            <div class="map-placeholder-icon">🗺</div>
-            <div class="map-placeholder-text">Mapbox · Impressions Heat</div>
+      <!-- Mobile toggle — only visible on small screens -->
+      <div class="map-toggle-bar" id="map-toggle-bar">
+        <button class="map-toggle-btn active" id="map-toggle-clicks" onclick="showMap('clicks')">Ad Clicks</button>
+        <button class="map-toggle-btn" id="map-toggle-impressions" onclick="showMap('impressions')">Ad Impressions</button>
+      </div>
+      <div class="row-2" id="map-row">
+        <div class="map-panel" id="map-panel-clicks">
+          <div class="glass card" style="height:360px">
+            <div class="ctitle">Ad Clicks By Zip Code (1.1)</div>
+            <div class="map-body map-placeholder" id="map-clicks">
+              <div class="map-placeholder-icon">🗺</div>
+              <div class="map-placeholder-text">Mapbox · Clicks Heat</div>
+            </div>
           </div>
         </div>
-        <div class="glass card" style="height:360px">
-          <div class="ctitle">Ad Clicks By Zip Code (1.1)</div>
-          <div class="map-body map-placeholder" id="map-clicks">
-            <div class="map-placeholder-icon">🗺</div>
-            <div class="map-placeholder-text">Mapbox · Clicks Heat</div>
+        <div class="map-panel" id="map-panel-impressions">
+          <div class="glass card" style="height:360px">
+            <div class="ctitle">Ad Impressions By Zip Code (1.1)</div>
+            <div class="map-body map-placeholder" id="map-impressions">
+              <div class="map-placeholder-icon">🗺</div>
+              <div class="map-placeholder-text">Mapbox · Impressions Heat</div>
+            </div>
           </div>
         </div>
       </div>
@@ -689,14 +800,14 @@ body::before{
     <div>
       <div class="row-2">
         <div class="glass card" style="height:300px">
-          <div class="ctitle">Ad Impressions By Zip Code (1.2)</div>
-          <div class="bar-list" id="zip-impressions-bars">
+          <div class="ctitle">Ad Clicks By Zip Code (1.2)</div>
+          <div class="bar-list" id="zip-clicks-bars">
             <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-faint)">No data</div>
           </div>
         </div>
         <div class="glass card" style="height:300px">
-          <div class="ctitle">Ad Clicks By Zip Code (1.2)</div>
-          <div class="bar-list" id="zip-clicks-bars">
+          <div class="ctitle">Ad Impressions By Zip Code (1.2)</div>
+          <div class="bar-list" id="zip-impressions-bars">
             <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-faint)">No data</div>
           </div>
         </div>
@@ -2221,6 +2332,40 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 });
 
 }); // end DOMContentLoaded (settings + button wiring)
+
+/* ══════════════════════════════════════
+   MOBILE MAP TOGGLE
+══════════════════════════════════════ */
+function showMap(which) {
+  const isMobile = window.innerWidth <= 768;
+  if (!isMobile) return; // no-op on desktop
+  ['clicks','impressions'].forEach(type => {
+    const panel = document.getElementById('map-panel-' + type);
+    const btn = document.getElementById('map-toggle-' + type);
+    if (panel) panel.classList.toggle('hidden', type !== which);
+    if (btn) btn.classList.toggle('active', type === which);
+  });
+  // Resize the visible map so it fills its container correctly
+  const map = which === 'clicks' ? mapClicks : mapImpressions;
+  if (map) setTimeout(() => map.resize(), 50);
+}
+
+// On resize, reset both panels to visible if returning to desktop
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) {
+    ['clicks','impressions'].forEach(type => {
+      const panel = document.getElementById('map-panel-' + type);
+      if (panel) panel.classList.remove('hidden');
+    });
+  } else {
+    // Re-apply current toggle state
+    const activeBtn = document.querySelector('.map-toggle-btn.active');
+    if (activeBtn) {
+      const which = activeBtn.id.replace('map-toggle-','');
+      showMap(which);
+    }
+  }
+});
 
 /* ══════════════════════════════════════
    UTILS
