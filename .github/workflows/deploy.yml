@@ -25,10 +25,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inject API keys from secrets
+      - name: Verify placeholders exist in file
         run: |
-          sed -i "s|__SHEETS_API_KEY__|${{ secrets.SHEETS_API_KEY }}|g" index.html
-          sed -i "s|__MAPBOX_TOKEN__|${{ secrets.MAPBOX_TOKEN }}|g" index.html
+          echo "Checking for placeholders in index.html..."
+          grep -c '__SHEETS_API_KEY__' index.html && echo "SHEETS placeholder found" || echo "SHEETS placeholder NOT found"
+          grep -c '__MAPBOX_TOKEN__' index.html && echo "MAPBOX placeholder found" || echo "MAPBOX placeholder NOT found"
+
+      - name: Inject API keys from secrets
+        env:
+          SHEETS_KEY: ${{ secrets.SHEETS_API_KEY }}
+          MAPBOX_TOK: ${{ secrets.MAPBOX_TOKEN }}
+        run: |
+          sed -i "s|__SHEETS_API_KEY__|${SHEETS_KEY}|g" index.html
+          sed -i "s|__MAPBOX_TOKEN__|${MAPBOX_TOK}|g" index.html
+
+      - name: Verify injection succeeded
+        run: |
+          if grep -q '__SHEETS_API_KEY__' index.html; then
+            echo "ERROR: SHEETS placeholder was NOT replaced - check secret name"
+            exit 1
+          else
+            echo "SHEETS key injected successfully"
+          fi
+          if grep -q '__MAPBOX_TOKEN__' index.html; then
+            echo "ERROR: MAPBOX placeholder was NOT replaced - check secret name"
+            exit 1
+          else
+            echo "MAPBOX token injected successfully"
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
