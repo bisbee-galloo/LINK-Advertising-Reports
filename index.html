@@ -1158,7 +1158,8 @@ async function tryLogin(pw) {
   sheetsApiKey = keys.sheetsApiKey || '';
   mapboxToken  = keys.mapboxToken  || '';
 
-  if (!sheetsApiKey) {
+  const keyIsPlaceholder = !sheetsApiKey || sheetsApiKey === '__SHEETS_API_KEY__' || sheetsApiKey.trim() === '';
+  if (keyIsPlaceholder) {
     showAuthError('API key not configured — contact your LINK administrator');
     return;
   }
@@ -1547,10 +1548,11 @@ function renderKeywordBars(kwRows) {
     container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-msg">No keyword data</div><div class="empty-state-hint">Configure keyword range in Settings → Cell Mapping</div></div>';
     return;
   }
-  const max = Math.max(...validRows.map(r => parseFloat(r[1])||0)) || 1;
+  const cleanNum = v => parseFloat(String(v).replace(/[$,\s]/g, '')) || 0;
+  const max = Math.max(...validRows.map(r => cleanNum(r[1]))) || 1;
   validRows.slice(0,10).forEach((row) => {
     const kw = row[0] || '';
-    const clicks = parseFloat(row[1]) || 0;
+    const clicks = cleanNum(row[1]);
     const pct = Math.round((clicks / max) * 100);
     const div = document.createElement('div');
     div.className = 'brow';
@@ -1576,10 +1578,11 @@ function renderZipBars(containerId, zipRows) {
     container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📍</div><div class="empty-state-msg">No geographic data</div><div class="empty-state-hint">Configure zip range in Settings → Cell Mapping</div></div>';
     return;
   }
-  const max = Math.max(...validRows.map(r => parseFloat(r[1])||0)) || 1;
+  const cleanNum = v => parseFloat(String(v).replace(/[$,\s]/g, '')) || 0;
+  const max = Math.max(...validRows.map(r => cleanNum(r[1]))) || 1;
   validRows.slice(0,10).forEach((row) => {
     const zip = row[0] || '';
-    const val = parseFloat(row[1]) || 0;
+    const val = cleanNum(row[1]);
     const pct = Math.round((val / max) * 100);
     const div = document.createElement('div');
     div.className = 'brow';
@@ -2094,9 +2097,12 @@ function _paintMap(map, geojson, rows, sourceId, labelPrefix) {
   if (!map || !rows) return;
 
   // Build value lookup: zip → numeric value
+  // Strip commas/currency symbols that break parseFloat (e.g. "14,980" → 14980)
+  const cleanNum = v => parseFloat(String(v).replace(/[$,\s]/g, '')) || 0;
   const valMap = {};
-  rows.forEach(r => { valMap[String(r[0]).padStart(5,'0')] = parseFloat(r[1]) || 0; });
+  rows.forEach(r => { valMap[String(r[0]).padStart(5,'0')] = cleanNum(r[1]); });
   const max = Math.max(...Object.values(valMap)) || 1;
+  console.log('[Map] valMap:', valMap, '| max:', max);
 
   // Attach value to each feature as a property
   const painted = {
