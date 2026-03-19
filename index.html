@@ -1143,12 +1143,14 @@ async function tryLogin(pw) {
   for (const entry of CLIENT_REGISTRY) {
     try {
       const config = await fetchClientConfig(entry.sheetId);
-      if (config.password && config.password === pw) {
+      const storedPw = (config.password || '').trim();
+      console.log('[Auth] Fetched config for', entry.id, '| password field present:', !!storedPw, '| match:', storedPw === pw);
+      if (storedPw && storedPw === pw) {
         matched = { ...config, id: entry.id, sheetId: entry.sheetId };
         break;
       }
     } catch(e) {
-      console.warn('Config fetch failed for', entry.id, e.message);
+      console.warn('[Auth] Config fetch failed for', entry.id, ':', e.message);
     }
   }
 
