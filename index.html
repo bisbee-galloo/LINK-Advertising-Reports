@@ -1350,10 +1350,12 @@ async function fetchSheetData() {
   if (!currentClient || !sheetsApiKey || !currentClient.sheetId) return;
 
   // Build mapping from client config object (loaded from _config sheet tab)
+  // Only include mapping fields — value fields (kpi_tlbl, period_text etc.)
+  // are already resolved at login and stored directly on currentClient
   const MAPPING_FIELDS = [
     'kpi_clicks','kpi_clicks_trend','kpi_impr','kpi_impr_trend',
-    'kpi_ctr','kpi_ctr_trend','kpi_cpc','kpi_cpc_trend','kpi_tlbl',
-    'period_text','kw_range','zip_impr_range','zip_clicks_range',
+    'kpi_ctr','kpi_ctr_trend','kpi_cpc','kpi_cpc_trend',
+    'kw_range','zip_impr_range','zip_clicks_range',
     'demo_gender','demo_age','demo_income',
   ];
   const mapping = {};
@@ -1432,19 +1434,19 @@ function applySheetData(mapping, rangeIndex) {
     return rangeIndex[range] || null;
   }
 
-  // KPIs
+  // KPIs — kpi_tlbl and period_text are resolved at login, read from currentClient directly
+  const trendLbl = currentClient.kpi_tlbl || '';
   setKpiVal('kpi-clicks', val('kpi_clicks'));
-  setKpiTrend('kpi-clicks-trend', 'kpi-clicks-tlbl', val('kpi_clicks_trend'), val('kpi_tlbl'));
+  setKpiTrend('kpi-clicks-trend', 'kpi-clicks-tlbl', val('kpi_clicks_trend'), trendLbl);
   setKpiVal('kpi-impressions', val('kpi_impr'));
-  setKpiTrend('kpi-impressions-trend', 'kpi-impressions-tlbl', val('kpi_impr_trend'), val('kpi_tlbl'));
+  setKpiTrend('kpi-impressions-trend', 'kpi-impressions-tlbl', val('kpi_impr_trend'), trendLbl);
   setKpiVal('kpi-ctr', val('kpi_ctr'));
-  setKpiTrend('kpi-ctr-trend', 'kpi-ctr-tlbl', val('kpi_ctr_trend'), val('kpi_tlbl'));
+  setKpiTrend('kpi-ctr-trend', 'kpi-ctr-tlbl', val('kpi_ctr_trend'), trendLbl);
   setKpiVal('kpi-cpc', val('kpi_cpc'));
-  setKpiTrend('kpi-cpc-trend', 'kpi-cpc-tlbl', val('kpi_cpc_trend'), val('kpi_tlbl'), true);
+  setKpiTrend('kpi-cpc-trend', 'kpi-cpc-tlbl', val('kpi_cpc_trend'), trendLbl, true);
 
-  // Period
-  const period = val('period');
-  document.getElementById('period-text').textContent = period || '—';
+  // Period — also resolved at login
+  document.getElementById('period-text').textContent = currentClient.period_text || currentClient.period || '—';
 
   // Keywords — renderKeywordBars handles null/empty internally
   const kwRows = rows('kw_range');
