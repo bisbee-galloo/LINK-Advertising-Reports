@@ -2116,59 +2116,59 @@ function _paintMap(map, geojson, rows, sourceId, labelPrefix) {
   // Ensure style is loaded before adding sources/layers
   const applyLayers = () => {
     // Remove existing layers/source if present
-    ['zip-fill-' + sourceId, 'zip-outline-' + sourceId, 'zip-label-' + sourceId].forEach(id => {
+    ['zip-fill-' + sourceId, 'zip-outline-' + sourceId].forEach(id => {
       if (map.getLayer(id)) map.removeLayer(id);
     });
     if (map.getSource(sourceId)) map.removeSource(sourceId);
 
     map.addSource(sourceId, { type: 'geojson', data: painted });
 
-  map.addLayer({
-    id: 'zip-fill-' + sourceId,
-    type: 'fill',
-    source: sourceId,
-    paint: {
-      'fill-color': [
-        'interpolate', ['linear'], ['get', '_val'],
-        0,       'rgba(232,56,45,0.0)',
-        max*0.01,'rgba(232,56,45,0.08)',
-        max*0.3, 'rgba(232,56,45,0.28)',
-        max*0.6, 'rgba(232,56,45,0.55)',
-        max,     'rgba(232,56,45,0.85)',
-      ],
-      'fill-opacity': 0.85,
-    }
-  });
+    map.addLayer({
+      id: 'zip-fill-' + sourceId,
+      type: 'fill',
+      source: sourceId,
+      paint: {
+        'fill-color': [
+          'interpolate', ['linear'], ['get', '_val'],
+          0,        'rgba(232,56,45,0.0)',
+          max*0.01, 'rgba(232,56,45,0.08)',
+          max*0.3,  'rgba(232,56,45,0.28)',
+          max*0.6,  'rgba(232,56,45,0.55)',
+          max,      'rgba(232,56,45,0.85)',
+        ],
+        'fill-opacity': 0.85,
+      }
+    });
 
-  map.addLayer({
-    id: 'zip-outline-' + sourceId,
-    type: 'line',
-    source: sourceId,
-    paint: {
-      'line-color': 'rgba(232,56,45,0.3)',
-      'line-width': 1,
-    }
-  });
+    map.addLayer({
+      id: 'zip-outline-' + sourceId,
+      type: 'line',
+      source: sourceId,
+      paint: {
+        'line-color': 'rgba(232,56,45,0.3)',
+        'line-width': 1,
+      }
+    });
 
-  // Hover popup
-  const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'map-popup' });
+    // Hover popup
+    const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'map-popup' });
 
-  map.on('mousemove', 'zip-fill-' + sourceId, e => {
-    map.getCanvas().style.cursor = 'pointer';
-    const props = e.features[0].properties;
-    const zip = props._zip || '';
-    const val = props._val || 0;
-    popup.setLngLat(e.lngLat)
-      .setHTML(`<div style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;color:#1a1c24">
-        ${zip}<br><span style="color:#e8382d">${val.toLocaleString()}</span>
-        <span style="font-size:9px;font-weight:500;color:#6b7080;margin-left:2px">${labelPrefix}</span>
-      </div>`)
-      .addTo(map);
-  });
-  map.on('mouseleave', 'zip-fill-' + sourceId, () => {
-    map.getCanvas().style.cursor = '';
-    popup.remove();
-  });
+    map.on('mousemove', 'zip-fill-' + sourceId, e => {
+      map.getCanvas().style.cursor = 'pointer';
+      const props = e.features[0].properties;
+      const zip = props._zip || '';
+      const val = props._val || 0;
+      popup.setLngLat(e.lngLat)
+        .setHTML(`<div style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;color:#1a1c24">
+          ${zip}<br><span style="color:#e8382d">${val.toLocaleString()}</span>
+          <span style="font-size:9px;font-weight:500;color:#6b7080;margin-left:2px">${labelPrefix}</span>
+        </div>`)
+        .addTo(map);
+    });
+    map.on('mouseleave', 'zip-fill-' + sourceId, () => {
+      map.getCanvas().style.cursor = '';
+      popup.remove();
+    });
   }; // end applyLayers
 
   // Run now if style loaded, otherwise wait
