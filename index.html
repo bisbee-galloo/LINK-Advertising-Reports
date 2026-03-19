@@ -1159,9 +1159,8 @@ async function tryLogin(pw) {
   sheetsApiKey = keys.sheetsApiKey || '';
   mapboxToken  = keys.mapboxToken  || '';
 
-  // Check if key is missing or still an unreplaced placeholder
-  const isUnset = k => !k || k.trim() === '' || k === '__SHEETS_API_KEY__' || k.startsWith('__');
-  if (isUnset(sheetsApiKey)) {
+  // If key is completely missing, show helpful error
+  if (!sheetsApiKey || sheetsApiKey.trim() === '') {
     showAuthError('API key not configured — enter it in Settings → API Keys');
     return;
   }
@@ -1280,8 +1279,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   const session = LS.get('link_session');
 
-  const isUnset = k => !k || k.trim() === '' || k === '__SHEETS_API_KEY__' || k.startsWith('__');
-  if (session && session.sheetId && !isUnset(sheetsApiKey)) {
+  if (session && session.sheetId && sheetsApiKey && sheetsApiKey.trim() !== '') {
     // Re-fetch config from sheet to get fresh data
     try {
       const config = await fetchClientConfig(session.sheetId);
