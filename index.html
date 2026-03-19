@@ -2097,13 +2097,15 @@ function _paintMap(map, geojson, rows, sourceId, labelPrefix) {
     })
   };
 
-  // Remove existing layers/source if present
-  ['zip-fill-' + sourceId, 'zip-outline-' + sourceId, 'zip-label-' + sourceId].forEach(id => {
-    if (map.getLayer(id)) map.removeLayer(id);
-  });
-  if (map.getSource(sourceId)) map.removeSource(sourceId);
+  // Ensure style is loaded before adding sources/layers
+  const applyLayers = () => {
+    // Remove existing layers/source if present
+    ['zip-fill-' + sourceId, 'zip-outline-' + sourceId, 'zip-label-' + sourceId].forEach(id => {
+      if (map.getLayer(id)) map.removeLayer(id);
+    });
+    if (map.getSource(sourceId)) map.removeSource(sourceId);
 
-  map.addSource(sourceId, { type: 'geojson', data: painted });
+    map.addSource(sourceId, { type: 'geojson', data: painted });
 
   map.addLayer({
     id: 'zip-fill-' + sourceId,
@@ -2151,6 +2153,14 @@ function _paintMap(map, geojson, rows, sourceId, labelPrefix) {
     map.getCanvas().style.cursor = '';
     popup.remove();
   });
+  }; // end applyLayers
+
+  // Run now if style loaded, otherwise wait
+  if (map.isStyleLoaded()) {
+    applyLayers();
+  } else {
+    map.once('style.load', applyLayers);
+  }
 }
 
 // Compute bounding box of a GeoJSON FeatureCollection
