@@ -2036,63 +2036,55 @@ function _setMapLoading(on) {
 }
 
 async function _paintBothMaps(zipImprRows, zipClickRows) {
-  // Collect all unique zips across both datasets
-  const allZips = new Set([
-    ...(zipImprRows  || []).map(r => String(r[0]).padStart(5,'0')),
-    ...(zipClickRows || []).map(r => String(r[0]).padStart(5,'0')),
-  ]);
-
-  // Show loading indicator on both map containers while fetching boundaries
-  console.log('[Maps] updateMaps called | zipImprRows:', zipImprRows?.length, '| zipClickRows:', zipClickRows?.length);
   _setMapLoading(true);
 
-  let fullGeoJSON;
-  try {
-    fullGeoJSON = await fetchZipGeoJSON([...allZips]);
-  } catch(err) {
-    _setMapLoading(false);
-    console.error('GeoJSON fetch failed:', err);
-    toast('Map boundary data unavailable: ' + err.message, 'error');
-    return;
-  }
+  // Fetch boundaries separately for each dataset so each map only shows its own zips
+  const fetchFor = async (rows) => {
+    if (!rows || !rows.length) return null;
+    const zips = new Set(rows.map(r => String(r[0]).padStart(5,'0')));
+    try {
+      const geojson = await fetchZipGeoJSON([...zips]);
+      return filterGeoJSON(geojson, zips);
+    } catch(err) {
+      console.error('GeoJSON fetch failed:', err);
+      return null;
+    }
+  };
 
-  console.log('[Maps] Total features from TIGERweb:', fullGeoJSON.features.length, '| Zips requested:', [...allZips]);
-  const filtered = filterGeoJSON(fullGeoJSON, allZips);
-  console.log('[Maps] Features after filter:', filtered.features.length);
-  if (!filtered.features.length) {
-    toast('No matching zip boundaries found — check console for details', 'error');
-    return;
-  }
+  const [clicksGeo, imprGeo] = await Promise.all([
+    fetchFor(zipClickRows),
+    fetchFor(zipImprRows),
+  ]);
 
-  // Paint each map
-  _paintMap(mapImpressions, filtered, zipImprRows,  'impressions', 'Ad Impressions');
-  _paintMap(mapClicks,      filtered, zipClickRows, 'clicks',      'Ad Clicks');
   _setMapLoading(false);
 
-  // Fit both maps to the zip boundary extent
-  const bbox = getBbox(filtered);
-  if (bbox) {
-    [mapImpressions, mapClicks].forEach(m => {
-      m.fitBounds(bbox, { padding: 28, duration: 800 });
-    });
-  } else {
-    // Fallback: use CENTLAT/CENTLON string properties from TIGERweb
-    const centers = filtered.features
-      .map(f => [parseFloat(f.properties.CENTLON), parseFloat(f.properties.CENTLAT)])
-      .filter(([lng, lat]) => !isNaN(lng) && !isNaN(lat));
-    if (centers.length) {
-      const lngs = centers.map(c => c[0]);
-      const lats = centers.map(c => c[1]);
-      const fallbackBbox = [
-        [Math.min(...lngs), Math.min(...lats)],
-        [Math.max(...lngs), Math.max(...lats)],
-      ];
-      console.log('[Maps] Using CENTLAT/CENTLON fallback bbox:', fallbackBbox);
-      [mapImpressions, mapClicks].forEach(m => {
-        m.fitBounds(fallbackBbox, { padding: 60, duration: 800 });
-      });
-    }
+  if (!clicksGeo && !imprGeo) {
+    toast('Map boundary data unavailable', 'error');
+    return;
   }
+
+  // Paint each map with only its own boundaries
+  if (clicksGeo && clicksGeo.features.length) {
+    _paintMap(mapClicks, clicksGeo, zipClickRows, 'clicks', 'Ad Clicks');
+    const bbox = getBbox(clicksGeo) || getCenterBbox(clicksGeo);
+    if (bbox) mapClicks.fitBounds(bbox, { padding: 28, duration: 800 });
+  }
+
+  if (imprGeo && imprGeo.features.length) {
+    _paintMap(mapImpressions, imprGeo, zipImprRows, 'impressions', 'Ad Impressions');
+    const bbox = getBbox(imprGeo) || getCenterBbox(imprGeo);
+    if (bbox) mapImpressions.fitBounds(bbox, { padding: 28, duration: 800 });
+  }
+}
+
+function getCenterBbox(geojson) {
+  const centers = geojson.features
+    .map(f => [parseFloat(f.properties.CENTLON), parseFloat(f.properties.CENTLAT)])
+    .filter(([lng, lat]) => !isNaN(lng) && !isNaN(lat));
+  if (!centers.length) return null;
+  const lngs = centers.map(c => c[0]);
+  const lats = centers.map(c => c[1]);
+  return [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]];
 }
 
 function _paintMap(map, geojson, rows, sourceId, labelPrefix) {
