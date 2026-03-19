@@ -1,0 +1,2159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LINK SP — Google Ads Snapshot Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<link href='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css' rel='stylesheet'/>
+<script src='https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+<style>
+/* ── CSS CUSTOM PROPERTIES ── */
+:root {
+  --font-primary: 'Proxima Nova', 'Montserrat', sans-serif;
+  --red: #e8382d;
+  --red-dark: #c92e24;
+  --dark-hdr: #1a1c24;
+  --silver: #c0bfcc;
+  --green: #22c55e;
+  --bg: #f5f6f9;
+  --text: #1a1c24;
+  --text-muted: #6b7080;
+  --text-faint: #adb4c0;
+  --glass-bg: rgba(255,255,255,0.72);
+  --glass-border: rgba(255,255,255,0.9);
+  --glass-shadow: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,1);
+  --glass-hover-border: rgba(232,56,45,0.3);
+  --glass-hover-shadow: 0 4px 16px rgba(0,0,0,0.09), 0 0 0 1px rgba(232,56,45,0.1), inset 0 1px 0 rgba(255,255,255,1);
+  --stripe: rgba(0,0,0,0.05);
+  --input-bg: rgba(255,255,255,0.6);
+  --input-border: rgba(0,0,0,0.09);
+}
+
+/* ── RESET ── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-primary);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+button{font-family:var(--font-primary);cursor:pointer}
+input,textarea,select{font-family:var(--font-primary)}
+
+/* ── BACKGROUND ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 65% 50% at 5% 8%, rgba(232,56,45,0.07) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 92% 92%, rgba(200,205,220,0.4) 0%, transparent 55%),
+    linear-gradient(160deg,#f5f6f9 0%,#eceef3 100%);
+}
+
+/* ── AUTH SCREEN ── */
+#auth-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--dark-hdr);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;
+}
+#auth-screen::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(232,56,45,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 85% 80%, rgba(232,56,45,0.06) 0%, transparent 55%);
+}
+.auth-box{
+  position:relative;z-index:1;
+  width:360px;
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:16px;
+  padding:40px 36px;
+  backdrop-filter:blur(20px);
+}
+.auth-logo{
+  width:52px;height:52px;border-radius:10px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.14);
+  display:flex;align-items:center;justify-content:center;
+  font-size:8px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.4;
+  margin:0 auto 24px;
+  overflow:hidden;
+}
+.auth-logo img{width:100%;height:100%;object-fit:contain}
+.auth-title{font-size:18px;font-weight:800;color:white;text-align:center;margin-bottom:4px;letter-spacing:-.4px}
+.auth-sub{font-size:10px;font-weight:500;letter-spacing:1.8px;text-transform:uppercase;color:rgba(255,255,255,0.35);text-align:center;margin-bottom:32px}
+.auth-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:8px;display:block}
+.auth-input{
+  width:100%;padding:12px 16px;border-radius:8px;
+  background:rgba(255,255,255,0.07);
+  border:1px solid rgba(255,255,255,0.12);
+  color:white;font-size:14px;font-weight:500;
+  outline:none;transition:border-color .2s;
+  letter-spacing:2px;
+}
+.auth-input::placeholder{color:rgba(255,255,255,0.2);letter-spacing:0}
+.auth-input:focus{border-color:rgba(232,56,45,0.6)}
+.auth-btn{
+  width:100%;margin-top:20px;padding:13px;border-radius:8px;
+  background:var(--red);color:white;border:none;
+  font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;
+  transition:background .2s,transform .1s;
+}
+.auth-btn:hover{background:var(--red-dark)}
+.auth-btn:active{transform:scale(.98)}
+.auth-error{
+  margin-top:12px;text-align:center;font-size:11px;font-weight:600;
+  color:rgba(232,56,45,0.9);display:none;
+}
+.auth-error.show{display:block}
+
+/* ── MAIN APP ── */
+#app{position:relative;z-index:1;display:none}
+#app.visible{display:block}
+
+/* ── HEADER ── */
+.hdr{
+  background:var(--dark-hdr);
+  border-bottom:1px solid rgba(0,0,0,0.15);
+  padding:0 36px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:70px;position:sticky;top:0;z-index:200;
+}
+.hdr-l{display:flex;align-items:center;gap:16px}
+.logo-box{
+  width:46px;height:46px;border-radius:9px;
+  background:rgba(255,255,255,0.09);
+  border:1px solid rgba(255,255,255,0.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:8px;color:rgba(255,255,255,0.35);text-align:center;line-height:1.4;
+  cursor:pointer;transition:all .2s;overflow:hidden;flex-shrink:0;
+  position:relative;
+}
+.logo-box:hover{border-color:rgba(232,56,45,0.6);color:rgba(255,255,255,0.7)}
+.logo-box img{width:100%;height:100%;object-fit:contain;display:none}
+.logo-upload{display:none}
+.hdr-title{font-size:16px;font-weight:700;letter-spacing:-.2px;color:white}
+.hdr-sub{font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;color:#b9bbb6;margin-top:2px}
+.hdr-r{display:flex;align-items:center;gap:9px}
+.btn{padding:7px 17px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.4px;border:none;transition:all .2s}
+.btn-red{background:var(--red);color:white}
+.btn-red:hover{background:var(--red-dark)}
+.btn-ghost{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.15)}
+.btn-ghost:hover{background:rgba(255,255,255,0.18)}
+.btn-icon{background:none;border:none;color:rgba(255,255,255,0.45);font-size:16px;cursor:pointer;padding:7px 9px;line-height:1;transition:color .2s}
+.btn-icon:hover{color:rgba(255,255,255,0.85)}
+
+/* ── PERIOD BAR ── */
+.pbar{
+  padding:9px 36px;
+  background:rgba(255,255,255,0.6);
+  border-bottom:1px solid rgba(0,0,0,0.07);
+  display:flex;align-items:center;gap:16px;
+  backdrop-filter:blur(12px);
+}
+.ppill{
+  background:rgba(255,255,255,0.8);border:1px solid rgba(0,0,0,0.09);
+  border-radius:6px;padding:5px 13px;font-size:12px;color:var(--text-muted);
+}
+.ppill b{color:var(--text);font-weight:700}
+.ldot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px rgba(34,197,94,0.6);display:inline-block;margin-right:6px;vertical-align:middle}
+.ldot.offline{background:#e8382d;box-shadow:0 0 6px rgba(232,56,45,0.6)}
+
+/* ── MAIN LAYOUT ── */
+.main{padding:26px 36px 56px;display:flex;flex-direction:column;gap:26px;max-width:1220px;margin:0 auto}
+
+/* ── SECTION HEADER ── */
+.sh{display:flex;align-items:center;gap:12px;margin-bottom:15px}
+.sh h2{font-size:11.5px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#363636;white-space:nowrap}
+.sh-line{flex:1;height:1px;background:rgba(0,0,0,0.08)}
+.sh-bar{width:3px;height:15px;border-radius:2px;background:var(--red);flex-shrink:0}
+
+/* ── GLASS CARD ── */
+.glass{
+  background:var(--glass-bg);
+  backdrop-filter:blur(20px) saturate(180%);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid var(--glass-border);
+  border-radius:13px;
+  box-shadow:var(--glass-shadow);
+  transition:border-color .25s,box-shadow .25s;
+}
+.glass:hover{
+  border-color:var(--glass-hover-border);
+  box-shadow:var(--glass-hover-shadow);
+}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}
+.kpi{
+  padding:26px 28px 22px;position:relative;overflow:hidden;
+  height:158px;display:flex;flex-direction:column;justify-content:space-between;
+}
+.kpi::before{
+  content:'';position:absolute;inset:0;border-radius:13px;
+  background:radial-gradient(ellipse 80% 60% at 0% 0%, rgba(232,56,45,0.055) 0%, transparent 70%);
+  pointer-events:none;
+}
+.kpi::after{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  border-radius:13px 13px 0 0;
+  background:linear-gradient(90deg,rgba(232,56,45,0.9) 0%, rgba(232,56,45,0.15) 60%, transparent 100%);
+}
+.kpi-tag{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#6e324c}
+.kpi-val{font-size:44px;font-weight:800;letter-spacing:-2px;line-height:1;color:var(--text);margin:2px 0 0}
+.kpi-trend{display:flex;align-items:center;gap:8px}
+.tup{background:rgba(34,197,94,0.12);color:#15803d;border:1px solid rgba(34,197,94,0.3);border-radius:5px;padding:2px 8px;font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1}
+.tdn{background:rgba(232,56,45,0.1);color:#c92e24;border:1px solid rgba(232,56,45,0.25);border-radius:5px;padding:2px 8px;font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1}
+.tlbl{font-size:10px;color:var(--text-muted);letter-spacing:.8px;text-transform:uppercase;font-weight:600}
+
+/* ── ROW GRIDS ── */
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:stretch}
+.row-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:stretch}
+
+/* ── BASE CARD ── */
+.card{display:flex;flex-direction:column;padding:22px 24px;overflow:hidden}
+
+/* ── CARD TITLE ── */
+.ctitle{
+  flex-shrink:0;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;
+  color:#6e324c;margin-bottom:16px;display:flex;align-items:center;gap:8px;
+}
+.ctitle::before{content:'';width:3px;height:12px;border-radius:2px;background:var(--red);display:inline-block;flex-shrink:0}
+.ctitle-center{justify-content:center}
+.ctitle-center::before{display:none}
+
+/* ── NOTE CARDS ── */
+.note-card{display:flex;flex-direction:column;padding:22px 24px 18px;overflow:hidden}
+.note-textarea{
+  flex:1;min-height:0;width:100%;
+  background:transparent;border:none;border-top:1px solid rgba(0,0,0,0.07);
+  border-radius:0;padding:14px 2px 0;
+  font-size:14px;font-family:var(--font-primary);
+  color:var(--text);line-height:1.8;resize:none;outline:none;
+  overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:thin;scrollbar-color:rgba(232,56,45,0.3) transparent;
+}
+.note-textarea::-webkit-scrollbar{width:3px}
+.note-textarea::-webkit-scrollbar-track{background:transparent}
+.note-textarea::-webkit-scrollbar-thumb{background:rgba(232,56,45,0.35);border-radius:2px}
+.note-textarea::placeholder{color:var(--text-faint)}
+
+/* ── BAR ROWS ── */
+.bar-list{display:flex;flex-direction:column;gap:0;flex:1;min-height:0}
+.brow{display:flex;align-items:center;gap:10px;flex:1}
+.bkw{font-size:11px;color:var(--text-muted);width:155px;flex-shrink:0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkw-sm{font-size:11px;color:var(--text-muted);width:50px;flex-shrink:0;text-align:right;font-family:monospace;letter-spacing:.5px}
+.btrack{flex:1;height:20px;background:rgba(0,0,0,0.05);border-radius:5px;overflow:hidden}
+.bfill{height:100%;border-radius:5px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:9px;font-weight:700;color:white;transition:width .6s ease}
+
+/* ── MAP ── */
+.map-body{
+  flex:1;min-height:0;border-radius:9px;overflow:hidden;
+  border:1px solid rgba(0,0,0,0.08);position:relative;
+}
+.map-placeholder{
+  background:linear-gradient(150deg,#dde2ec 0%,#e8eaf0 100%);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;
+}
+.map-placeholder-icon{font-size:24px;opacity:.3}
+.map-placeholder-text{font-size:10px;color:rgba(0,0,0,0.3);letter-spacing:1.8px;text-transform:uppercase}
+.mapboxgl-map{width:100%;height:100%}
+
+/* ── DONUT ── */
+.donut-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;gap:16px}
+.dnut-wrap{position:relative;width:130px;height:130px;flex-shrink:0}
+.dnut-wrap canvas{width:130px!important;height:130px!important}
+.dleg{width:100%;display:flex;flex-direction:column;gap:6px;padding:0 4px}
+.dli{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:600;color:var(--text-muted)}
+.dli-pct{margin-left:auto;font-size:10px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+.dldt{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+
+/* ── SPINNER ── */
+.spinner{
+  display:inline-block;width:14px;height:14px;border-radius:50%;
+  border:2px solid rgba(255,255,255,0.25);border-top-color:white;
+  animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.refreshing .spinner{display:inline-block}
+.spinning-icon{display:inline-block;animation:spin .7s linear infinite}
+
+/* ═══════════════════════════════════════════
+   SETTINGS PANEL
+═══════════════════════════════════════════ */
+#settings-overlay{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(15,16,22,0.7);backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;
+}
+#settings-overlay.open{display:flex}
+.settings-panel{
+  background:#1e2030;border:1px solid rgba(255,255,255,0.1);border-radius:16px;
+  width:780px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:0 24px 80px rgba(0,0,0,0.5);
+}
+.sp-header{
+  padding:20px 28px;border-bottom:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.sp-title{font-size:14px;font-weight:800;color:white;letter-spacing:-.2px}
+.sp-close{background:none;border:none;color:rgba(255,255,255,0.4);font-size:20px;line-height:1;cursor:pointer;padding:4px;transition:color .2s}
+.sp-close:hover{color:white}
+.sp-tabs{display:flex;padding:0 28px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0}
+.sp-tab{
+  padding:12px 18px;font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+  color:rgba(255,255,255,0.35);border:none;background:none;cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .2s;margin-bottom:-1px;
+}
+.sp-tab.active{color:white;border-bottom-color:var(--red)}
+.sp-body{flex:1;overflow-y:auto;padding:24px 28px;scrollbar-width:thin;scrollbar-color:rgba(232,56,45,0.4) rgba(255,255,255,0.05)}
+.sp-body::-webkit-scrollbar{width:4px}
+.sp-body::-webkit-scrollbar-track{background:rgba(255,255,255,0.03)}
+.sp-body::-webkit-scrollbar-thumb{background:rgba(232,56,45,0.4);border-radius:2px}
+
+/* Settings form elements */
+.sp-section{margin-bottom:28px}
+.sp-section-title{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.3);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.sp-row{display:grid;gap:12px;margin-bottom:12px}
+.sp-row.cols-2{grid-template-columns:1fr 1fr}
+.sp-row.cols-3{grid-template-columns:1fr 1fr 1fr}
+.sp-field{display:flex;flex-direction:column;gap:6px}
+.sp-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.4)}
+.sp-input{
+  padding:9px 13px;border-radius:7px;font-size:12px;font-weight:500;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  color:white;outline:none;transition:border-color .2s;
+}
+.sp-input::placeholder{color:rgba(255,255,255,0.2)}
+.sp-input:focus{border-color:rgba(232,56,45,0.5)}
+.sp-input.mono{font-family:monospace;letter-spacing:.5px;font-size:11px}
+.sp-textarea{
+  padding:9px 13px;border-radius:7px;font-size:11px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  color:white;outline:none;resize:vertical;min-height:60px;
+  font-family:monospace;letter-spacing:.3px;line-height:1.6;
+  transition:border-color .2s;
+}
+.sp-textarea:focus{border-color:rgba(232,56,45,0.5)}
+.sp-hint{font-size:10px;color:rgba(255,255,255,0.25);line-height:1.5;margin-top:2px}
+.sp-btn{
+  padding:8px 18px;border-radius:7px;font-size:11px;font-weight:700;
+  letter-spacing:.5px;border:none;cursor:pointer;transition:all .2s;
+}
+.sp-btn-red{background:var(--red);color:white}
+.sp-btn-red:hover{background:var(--red-dark)}
+.sp-btn-ghost{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.12)}
+.sp-btn-ghost:hover{background:rgba(255,255,255,0.14)}
+.sp-btn-danger{background:rgba(232,56,45,0.12);color:rgba(232,56,45,0.9);border:1px solid rgba(232,56,45,0.2)}
+.sp-btn-danger:hover{background:rgba(232,56,45,0.22)}
+.sp-actions{display:flex;gap:10px;justify-content:flex-end;padding-top:16px;border-top:1px solid rgba(255,255,255,0.07)}
+
+/* Client list */
+.client-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.client-item{
+  background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);
+  border-radius:9px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;transition:all .2s;
+}
+.client-item:hover{border-color:rgba(232,56,45,0.3);background:rgba(232,56,45,0.04)}
+.client-item.active{border-color:rgba(232,56,45,0.5);background:rgba(232,56,45,0.07)}
+.client-item-name{font-size:13px;font-weight:700;color:white}
+.client-item-meta{font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px}
+.client-item-actions{display:flex;gap:8px}
+
+/* Cell mapping table */
+.mapping-table{width:100%;border-collapse:separate;border-spacing:0 6px}
+.mapping-table th{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.3);text-align:left;padding:0 10px 6px;border-bottom:1px solid rgba(255,255,255,0.07)}
+.mapping-table td{padding:4px 6px;vertical-align:middle}
+.mapping-table td:first-child{font-size:11px;color:rgba(255,255,255,0.6);padding-left:10px;white-space:nowrap}
+.mapping-table td:last-child{padding-right:10px}
+.mapping-table tr:hover td{background:rgba(255,255,255,0.02)}
+.map-input{
+  padding:6px 10px;border-radius:5px;font-size:11px;font-family:monospace;letter-spacing:.5px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  color:white;outline:none;width:100%;transition:border-color .2s;
+}
+.map-input:focus{border-color:rgba(232,56,45,0.5)}
+.map-input::placeholder{color:rgba(255,255,255,0.18)}
+
+/* Toast notification */
+#toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#1e2030;border:1px solid rgba(255,255,255,0.12);border-radius:9px;
+  padding:10px 20px;font-size:12px;font-weight:600;color:white;
+  z-index:9998;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.success{border-color:rgba(34,197,94,0.4);color:#22c55e}
+#toast.error{border-color:rgba(232,56,45,0.4);color:#e8382d}
+
+/* ── FOOTER ── */
+.report-footer{
+  background:var(--dark-hdr);
+  border-top:3px solid var(--red);
+  padding:28px 36px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:32px;
+}
+.footer-text{
+  display:flex;flex-direction:column;gap:5px;
+}
+.footer-authorized{
+  font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  color:rgba(255,255,255,0.35);margin-bottom:4px;
+}
+.footer-client{
+  font-size:15px;font-weight:800;color:white;letter-spacing:-.2px;
+}
+.footer-authors{
+  font-size:11px;font-weight:500;color:rgba(255,255,255,0.5);line-height:1.7;margin-top:2px;
+}
+.footer-authors b{color:rgba(255,255,255,0.8);font-weight:700}
+.footer-logo{
+  width:64px;height:64px;border-radius:10px;
+  background:rgba(255,255,255,0.07);
+  border:1px solid rgba(255,255,255,0.12);
+  display:flex;align-items:center;justify-content:center;
+  font-size:8px;color:rgba(255,255,255,0.25);text-align:center;line-height:1.5;
+  flex-shrink:0;overflow:hidden;cursor:pointer;transition:border-color .2s;
+}
+.footer-logo:hover{border-color:rgba(232,56,45,0.5)}
+.footer-logo img{width:100%;height:100%;object-fit:contain;display:none}
+
+/* Mapbox popup styling */
+.map-popup .mapboxgl-popup-content{
+  background:rgba(255,255,255,0.95);
+  border:1px solid rgba(232,56,45,0.2);
+  border-radius:7px;padding:8px 12px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.12);
+}
+.map-popup .mapboxgl-popup-tip{display:none}
+
+/* Map loading overlay */
+.map-loading{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  background:rgba(245,246,249,0.7);backdrop-filter:blur(4px);z-index:10;border-radius:9px;
+  font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-faint);
+  gap:10px;pointer-events:none;
+}
+
+/* Print */
+@media print{
+  /* Hide interactive UI */
+  #settings-overlay,#toast,#auth-screen,
+  .hdr .hdr-r,#logout-btn,#settings-btn,
+  #refresh-btn,.btn-ghost,.btn-icon{display:none!important}
+
+  /* Page setup — suppress browser-generated header/footer (URL, title) */
+  @page{
+    margin:12mm 10mm;
+    /* These suppress the default header/footer in supporting browsers */
+    @top-center{content:none}
+    @bottom-center{content:none}
+  }
+  html,body{background:white!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body::before{display:none!important}
+
+  /* Header */
+  .hdr{
+    position:relative!important;
+    background:#1a1c24!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+    padding:0 24px;
+  }
+
+  /* Remove backdrop-filter — not supported in print */
+  .glass,.pbar{
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+  }
+
+  /* Cards get solid white backgrounds */
+  .glass{
+    background:#ffffff!important;
+    border:1px solid #e0e0e0!important;
+    box-shadow:none!important;
+  }
+
+  /* Period bar */
+  .pbar{
+    background:#f5f6f5!important;
+    border-bottom:1px solid #e0e0e0!important;
+  }
+
+  /* KPI cards — force background and accent bar */
+  .kpi{background:#ffffff!important}
+  .kpi::before{display:none!important}
+  .kpi::after{
+    background:linear-gradient(90deg,#e8382d,transparent)!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  /* Trend badges */
+  .tup{
+    background:rgba(34,197,94,0.12)!important;
+    border:1px solid rgba(34,197,94,0.3)!important;
+    color:#15803d!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  .tdn{
+    background:rgba(232,56,45,0.1)!important;
+    border:1px solid rgba(232,56,45,0.25)!important;
+    color:#c92e24!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  /* Bar fills — force red color to print */
+  .bfill{
+    background:#e8382d!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  .btrack{background:#eeeeee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+  /* Textareas — expand to show all content */
+  .note-textarea{
+    overflow:visible!important;
+    height:auto!important;
+    min-height:60px!important;
+    border:none!important;
+    background:transparent!important;
+  }
+  .note-card,.card{overflow:visible!important;height:auto!important}
+
+  /* Maps */
+  .map-body{min-height:260px!important}
+
+  /* Prevent cards from breaking across pages */
+  .glass,.kpi,.card,.note-card{page-break-inside:avoid;break-inside:avoid}
+  .sh{page-break-after:avoid;break-after:avoid}
+
+  /* Footer */
+  .report-footer{
+    background:#1a1c24!important;
+    border-top:3px solid #e8382d!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+  .footer-client{color:white!important}
+  .footer-authors{color:rgba(255,255,255,0.6)!important}
+  .footer-authors b{color:rgba(255,255,255,0.85)!important}
+  .footer-authorized{color:rgba(255,255,255,0.4)!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     AUTH SCREEN
+══════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo" id="auth-logo-box">
+      <img id="auth-logo-img" src="" alt=""/>
+      <span id="auth-logo-text">LINK<br>SP</span>
+    </div>
+    <div class="auth-title">Client Report</div>
+    <div class="auth-sub">LINK Strategic Partners</div>
+    <label class="auth-label">Access Password</label>
+    <input class="auth-input" type="password" id="auth-pw-input" placeholder="Enter your password" autocomplete="current-password"/>
+    <div class="auth-error" id="auth-error">Incorrect password. Please try again.</div>
+    <button class="auth-btn" id="auth-btn">Access Report →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════ -->
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-l">
+      <div class="logo-box" id="logo-box" title="Click to upload logo">
+        <img id="logo-img" src="" alt=""/>
+        <span id="logo-text">LOGO</span>
+        <input type="file" class="logo-upload" id="logo-upload" accept="image/*"/>
+      </div>
+      <div>
+        <div class="hdr-title" id="hdr-title">Google Search Snapshot Report</div>
+        <div class="hdr-sub" id="hdr-sub">Loading…</div>
+      </div>
+    </div>
+    <div class="hdr-r">
+      <button class="btn btn-red" id="refresh-btn">↻ Refresh</button>
+      <button class="btn btn-ghost" onclick="window.print()">⬇ Export PDF</button>
+      <button class="btn-icon" id="settings-btn" title="Settings">⚙</button>
+      <button class="btn-icon" id="logout-btn" title="Sign out" style="font-size:13px">⏻</button>
+    </div>
+  </div>
+
+  <!-- PERIOD BAR -->
+  <div class="pbar">
+    <div class="ppill">Reporting Period: <b id="period-text">—</b></div>
+    <span id="conn-status"><span class="ldot offline" id="conn-dot"></span><span style="font-size:10px;color:var(--text-muted)" id="conn-label">Not connected</span></span>
+    <span style="font-size:10px;color:var(--text-faint);margin-left:auto" id="last-refreshed">—</span>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <!-- KPIs -->
+    <div>
+      <div class="sh"><div class="sh-bar"></div><h2>Top Line Campaign Performance</h2><div class="sh-line"></div></div>
+      <div class="kpi-grid">
+        <div class="glass kpi">
+          <div class="kpi-tag">Ad Clicks</div>
+          <div class="kpi-val" id="kpi-clicks">—</div>
+          <div class="kpi-trend"><span id="kpi-clicks-trend" class="tup" style="display:none"></span><span class="tlbl" id="kpi-clicks-tlbl"></span></div>
+        </div>
+        <div class="glass kpi">
+          <div class="kpi-tag">Impressions</div>
+          <div class="kpi-val" id="kpi-impressions">—</div>
+          <div class="kpi-trend"><span id="kpi-impressions-trend" class="tup" style="display:none"></span><span class="tlbl" id="kpi-impressions-tlbl"></span></div>
+        </div>
+        <div class="glass kpi">
+          <div class="kpi-tag">Avg. Click-Through Rate (CTR)</div>
+          <div class="kpi-val" id="kpi-ctr">—</div>
+          <div class="kpi-trend"><span id="kpi-ctr-trend" class="tdn" style="display:none"></span><span class="tlbl" id="kpi-ctr-tlbl"></span></div>
+        </div>
+        <div class="glass kpi">
+          <div class="kpi-tag">Avg. Cost-Per-Click (CPC)</div>
+          <div class="kpi-val" id="kpi-cpc">—</div>
+          <div class="kpi-trend"><span id="kpi-cpc-trend" class="tup" style="display:none"></span><span class="tlbl" id="kpi-cpc-tlbl"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PERFORMANCE NOTES -->
+    <div>
+      <div class="sh"><div class="sh-bar"></div><h2>Performance Notes</h2><div class="sh-line"></div></div>
+      <div class="glass note-card" style="height:188px">
+        <textarea class="note-textarea" id="notes-performance" placeholder="Add analyst notes here…"></textarea>
+      </div>
+    </div>
+
+    <!-- KEYWORD ANALYSIS -->
+    <div>
+      <div class="sh"><div class="sh-bar"></div><h2>Keyword Analysis &amp; Insights</h2><div class="sh-line"></div></div>
+      <div class="row-2">
+        <div class="glass card" style="height:360px">
+          <div class="ctitle">Top Keywords by Clicks</div>
+          <div class="bar-list" id="kw-bar-list">
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-faint)">No data — configure cell mapping in Settings</div>
+          </div>
+        </div>
+        <div class="glass note-card" style="height:360px">
+          <div class="ctitle">Keyword Insights</div>
+          <textarea class="note-textarea" id="notes-keywords" placeholder="Add keyword insights here…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- GEOGRAPHIC — MAPS -->
+    <div>
+      <div class="sh"><div class="sh-bar"></div><h2>Geographic Performance</h2><div class="sh-line"></div></div>
+      <div class="row-2">
+        <div class="glass card" style="height:360px">
+          <div class="ctitle">Ad Impressions By Zip Code (1.1)</div>
+          <div class="map-body map-placeholder" id="map-impressions">
+            <div class="map-placeholder-icon">🗺</div>
+            <div class="map-placeholder-text">Mapbox · Impressions Heat</div>
+          </div>
+        </div>
+        <div class="glass card" style="height:360px">
+          <div class="ctitle">Ad Clicks By Zip Code (1.1)</div>
+          <div class="map-body map-placeholder" id="map-clicks">
+            <div class="map-placeholder-icon">🗺</div>
+            <div class="map-placeholder-text">Mapbox · Clicks Heat</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ZIP BAR CHARTS -->
+    <div>
+      <div class="row-2">
+        <div class="glass card" style="height:300px">
+          <div class="ctitle">Ad Impressions By Zip Code (1.2)</div>
+          <div class="bar-list" id="zip-impressions-bars">
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-faint)">No data</div>
+          </div>
+        </div>
+        <div class="glass card" style="height:300px">
+          <div class="ctitle">Ad Clicks By Zip Code (1.2)</div>
+          <div class="bar-list" id="zip-clicks-bars">
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-faint)">No data</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEMOGRAPHICS -->
+    <div>
+      <div class="sh"><div class="sh-bar"></div><h2>Campaign Demographic Data</h2><div class="sh-line"></div></div>
+      <div class="row-3">
+        <div class="glass card" style="height:270px">
+          <div class="ctitle ctitle-center">Gender Distribution</div>
+          <div class="donut-body">
+            <div class="dnut-wrap"><canvas id="donut-gender"></canvas></div>
+            <div class="dleg" id="dleg-gender"></div>
+          </div>
+        </div>
+        <div class="glass card" style="height:270px">
+          <div class="ctitle ctitle-center">Age Distribution</div>
+          <div class="donut-body">
+            <div class="dnut-wrap"><canvas id="donut-age"></canvas></div>
+            <div class="dleg" id="dleg-age"></div>
+          </div>
+        </div>
+        <div class="glass card" style="height:270px">
+          <div class="ctitle ctitle-center">Income Distribution</div>
+          <div class="donut-body">
+            <div class="dnut-wrap"><canvas id="donut-income"></canvas></div>
+            <div class="dleg" id="dleg-income"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FINAL THOUGHTS -->
+    <div>
+      <div class="sh"><div class="sh-bar"></div><h2>Final Thoughts</h2><div class="sh-line"></div></div>
+      <div class="glass note-card" style="height:255px">
+        <textarea class="note-textarea" id="notes-final" placeholder="Add final thoughts and recommendations here…"></textarea>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- FOOTER -->
+  <div class="report-footer">
+    <div class="footer-text">
+      <div class="footer-authorized">Report Authorized for</div>
+      <div class="footer-client" id="footer-client">—</div>
+      <div class="footer-authors" id="footer-authors"> </div>
+    </div>
+    <div class="footer-logo" id="footer-logo-box" title="Click to upload agency logo">
+      <img id="footer-logo-img" src="" alt=""/>
+      <span id="footer-logo-text">LINK<br>SP</span>
+      <input type="file" class="logo-upload" id="footer-logo-upload" accept="image/*"/>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ══════════════════════════════════════
+     SETTINGS PANEL
+══════════════════════════════════════ -->
+<div id="settings-overlay">
+  <div class="settings-panel">
+    <div class="sp-header">
+      <div class="sp-title">⚙ Report Settings</div>
+      <button class="sp-close" id="sp-close">✕</button>
+    </div>
+    <div class="sp-tabs">
+      <button class="sp-tab active" data-tab="clients">Clients</button>
+      <button class="sp-tab" data-tab="mapping">Cell Mapping</button>
+      <button class="sp-tab" data-tab="apikeys">API Keys</button>
+    </div>
+    <div class="sp-body">
+
+      <!-- ── CLIENTS TAB ── -->
+      <div id="tab-clients">
+        <div class="sp-section">
+          <div class="sp-section-title">Client Accounts</div>
+          <div class="client-list" id="client-list"></div>
+          <button class="sp-btn sp-btn-ghost" id="add-client-btn" style="width:100%;margin-top:4px">+ Add New Client</button>
+        </div>
+
+        <!-- Client editor (shown when editing a client) -->
+        <div id="client-editor" style="display:none">
+          <div class="sp-section">
+            <div class="sp-section-title" id="client-editor-title">Edit Client</div>
+            <div class="sp-row cols-2">
+              <div class="sp-field">
+                <label class="sp-label">Client Name</label>
+                <input class="sp-input" id="ce-name" placeholder="Acme Corporation"/>
+              </div>
+              <div class="sp-field">
+                <label class="sp-label">Access Password</label>
+                <input class="sp-input" id="ce-password" placeholder="client-password-123" autocomplete="new-password"/>
+              </div>
+            </div>
+            <div class="sp-row">
+              <div class="sp-field">
+                <label class="sp-label">Google Sheet ID</label>
+                <input class="sp-input mono" id="ce-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"/>
+                <div class="sp-hint">Found in the Sheet URL: docs.google.com/spreadsheets/d/<b>SHEET_ID</b>/edit</div>
+              </div>
+            </div>
+            <div class="sp-row cols-2">
+              <div class="sp-field">
+                <label class="sp-label">Reporting Period</label>
+                <input class="sp-input" id="ce-period" placeholder="March 2025"/>
+              </div>
+              <div class="sp-field">
+                <label class="sp-label">Report Title</label>
+                <input class="sp-input" id="ce-title" placeholder="Google Search Snapshot Report"/>
+              </div>
+            </div>
+            <div class="sp-row cols-2">
+              <div class="sp-field">
+                <label class="sp-label">Author 1 Name</label>
+                <input class="sp-input" id="ce-author1-name" placeholder="Jane Smith"/>
+              </div>
+              <div class="sp-field">
+                <label class="sp-label">Author 1 Title</label>
+                <input class="sp-input" id="ce-author1-title" placeholder="Senior Strategist"/>
+              </div>
+            </div>
+            <div class="sp-row cols-2">
+              <div class="sp-field">
+                <label class="sp-label">Author 2 Name</label>
+                <input class="sp-input" id="ce-author2-name" placeholder="John Doe"/>
+              </div>
+              <div class="sp-field">
+                <label class="sp-label">Author 2 Title</label>
+                <input class="sp-input" id="ce-author2-title" placeholder="Digital Director"/>
+              </div>
+            </div>
+            <div class="sp-actions">
+              <button class="sp-btn sp-btn-danger" id="ce-delete" style="margin-right:auto">Delete Client</button>
+              <button class="sp-btn sp-btn-ghost" id="ce-cancel">Cancel</button>
+              <button class="sp-btn sp-btn-red" id="ce-save">Save Client</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CELL MAPPING TAB ── -->
+      <div id="tab-mapping" style="display:none">
+        <div class="sp-section">
+          <div class="sp-section-title">Cell Mapping — <span id="mapping-client-name" style="color:rgba(255,255,255,0.5)">Select a client first</span></div>
+          <div class="sp-hint" style="margin-bottom:16px">Map each widget to a specific cell or range in the client's Google Sheet. Use A1 notation (e.g. <code style="color:rgba(232,56,45,0.8);font-size:10px">Sheet1!B4</code>) or a named range. Leave blank to skip.</div>
+
+          <table class="mapping-table" id="mapping-table">
+            <thead><tr>
+              <th>Widget</th>
+              <th>Cell / Range (A1 notation or named range)</th>
+            </tr></thead>
+            <tbody id="mapping-tbody"></tbody>
+          </table>
+
+          <div class="sp-actions">
+            <button class="sp-btn sp-btn-ghost" id="mapping-cancel">Cancel</button>
+            <button class="sp-btn sp-btn-red" id="mapping-save">Save Mapping</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── API KEYS TAB ── -->
+      <div id="tab-apikeys" style="display:none">
+        <div class="sp-section">
+          <div class="sp-section-title">Google Sheets API</div>
+          <div class="sp-row">
+            <div class="sp-field">
+              <label class="sp-label">API Key</label>
+              <input class="sp-input mono" id="api-sheets-key" placeholder="AIzaSy…" type="password" autocomplete="off"/>
+              <div class="sp-hint">Create a key at <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:rgba(232,56,45,0.7)">Google Cloud Console</a>. Enable the Google Sheets API. Restrict the key to the Sheets API and your domain.</div>
+            </div>
+          </div>
+        </div>
+        <div class="sp-section">
+          <div class="sp-section-title">Mapbox</div>
+          <div class="sp-row">
+            <div class="sp-field">
+              <label class="sp-label">Access Token</label>
+              <input class="sp-input mono" id="api-mapbox-token" placeholder="pk.eyJ1…" type="password" autocomplete="off"/>
+              <div class="sp-hint">Get a free token at <a href="https://account.mapbox.com/access-tokens/" target="_blank" style="color:rgba(232,56,45,0.7)">mapbox.com</a>. The free tier covers typical agency reporting volumes.</div>
+            </div>
+          </div>
+        </div>
+        <div class="sp-actions">
+          <button class="sp-btn sp-btn-red" id="api-save">Save API Keys</button>
+        </div>
+      </div>
+
+    </div><!-- /sp-body -->
+  </div><!-- /settings-panel -->
+</div><!-- /settings-overlay -->
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   LINK SP REPORT APP — Core Logic
+═══════════════════════════════════════════════ */
+
+// ── FIELD DEFINITIONS for cell mapping ──
+const FIELD_DEFS = [
+  // KPI values
+  {id:'kpi_clicks',       label:'KPI · Ad Clicks (value)',          group:'KPIs'},
+  {id:'kpi_clicks_trend', label:'KPI · Ad Clicks (trend, e.g. ↑ 8.5%)', group:'KPIs'},
+  {id:'kpi_impr',         label:'KPI · Impressions (value)',         group:'KPIs'},
+  {id:'kpi_impr_trend',   label:'KPI · Impressions (trend)',         group:'KPIs'},
+  {id:'kpi_ctr',          label:'KPI · CTR (value)',                 group:'KPIs'},
+  {id:'kpi_ctr_trend',    label:'KPI · CTR (trend)',                 group:'KPIs'},
+  {id:'kpi_cpc',          label:'KPI · CPC (value)',                 group:'KPIs'},
+  {id:'kpi_cpc_trend',    label:'KPI · CPC (trend)',                 group:'KPIs'},
+  {id:'kpi_tlbl',         label:'KPI · Trend label (all 4)',         group:'KPIs'},
+  // Period
+  {id:'period',           label:'Reporting Period text',             group:'Header'},
+  // Keywords — expects range A:B (keyword, clicks)
+  {id:'kw_range',         label:'Keywords range (col A: keyword, col B: clicks)', group:'Keywords'},
+  // Zip impressions — expects range A:B (zip, impressions)
+  {id:'zip_impr_range',   label:'Zip Impressions range (col A: zip, col B: value)', group:'Geographic'},
+  // Zip clicks — expects range A:B (zip, clicks)
+  {id:'zip_clicks_range', label:'Zip Clicks range (col A: zip, col B: value)', group:'Geographic'},
+  // Demographics — single cells or ranges
+  {id:'demo_gender',      label:'Gender demo range (col A: label, col B: pct)', group:'Demographics'},
+  {id:'demo_age',         label:'Age demo range (col A: label, col B: pct)',    group:'Demographics'},
+  {id:'demo_income',      label:'Income demo range (col A: label, col B: pct)', group:'Demographics'},
+];
+
+// ── STATE ──
+let currentClient = null;   // active client config object
+let sheetsApiKey = '';
+let mapboxToken = '';
+let mapImpressions = null;
+let mapClicks = null;
+let donutCharts = {};
+
+// ── STORAGE HELPERS ──
+const LS = {
+  get: k => { try { return JSON.parse(localStorage.getItem(k)) } catch(e) { return null }},
+  set: (k,v) => localStorage.setItem(k, JSON.stringify(v)),
+  del: k => localStorage.removeItem(k),
+};
+
+function getClients() { return LS.get('link_clients') || []; }
+function saveClients(c) { LS.set('link_clients', c); }
+function getApiKeys() { return LS.get('link_api_keys') || {}; }
+function saveApiKeys(k) { LS.set('link_api_keys', k); }
+function getMapping(clientId) { return LS.get('link_mapping_' + clientId) || {}; }
+function saveMapping(clientId, m) { LS.set('link_mapping_' + clientId, m); }
+function getNotes(clientId) { return LS.get('link_notes_' + clientId) || {}; }
+function saveNotes(clientId, n) { LS.set('link_notes_' + clientId, n); }
+function getClientLogo(clientId) { return localStorage.getItem('link_logo_' + clientId) || ''; }
+function saveClientLogo(clientId, dataUrl) { localStorage.setItem('link_logo_' + clientId, dataUrl); }
+function getFooterLogo() { return localStorage.getItem('link_footer_logo') || ''; }
+function saveFooterLogo(dataUrl) { localStorage.setItem('link_footer_logo', dataUrl); }
+
+// ── TOAST ──
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 2800);
+}
+
+/* ══════════════════════════════════════
+   AUTH
+══════════════════════════════════════ */
+function tryLogin(pw) {
+  const clients = getClients();
+  const match = clients.find(c => c.password === pw.trim());
+  if (!match) {
+    document.getElementById('auth-error').classList.add('show');
+    document.getElementById('auth-pw-input').style.borderColor = 'rgba(232,56,45,0.6)';
+    return;
+  }
+  LS.set('link_session', match.id);
+  bootClient(match);
+}
+
+function bootClient(client) {
+  currentClient = client;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+
+  // Load API keys
+  const keys = getApiKeys();
+  sheetsApiKey = keys.sheetsApiKey || '';
+  mapboxToken = keys.mapboxToken || '';
+
+  // Header
+  const reportTitle = client.title || 'Google Search Snapshot Report';
+  document.getElementById('hdr-title').textContent = reportTitle;
+  document.getElementById('hdr-sub').textContent = client.name || '—';
+  document.getElementById('period-text').textContent = client.period || '—';
+  document.title = reportTitle + ' — ' + (client.name || 'LINK SP');
+
+  // Logo + footer
+  applyLogo(client.id);
+  applyFooter(client);
+  applyFooterLogo();
+
+  // Notes
+  const notes = getNotes(client.id);
+  document.getElementById('notes-performance').value = notes.performance || '';
+  document.getElementById('notes-keywords').value = notes.keywords || '';
+  document.getElementById('notes-final').value = notes.final || '';
+
+  // Auto-save notes on change
+  const NOTE_KEYS = {'notes-performance':'performance','notes-keywords':'keywords','notes-final':'final'};
+  ['notes-performance','notes-keywords','notes-final'].forEach(id => {
+    document.getElementById(id).addEventListener('input', debounce(() => {
+      const notes = getNotes(client.id);
+      notes[NOTE_KEYS[id]] = document.getElementById(id).value;
+      saveNotes(client.id, notes);
+    }, 600));
+  });
+
+  // Render placeholder donuts
+  renderDonuts([
+    {label:'Male',pct:52},{label:'Female',pct:46},{label:'Unknown',pct:2}
+  ], [
+    {label:'25–34',pct:28},{label:'35–44',pct:24},{label:'45–54',pct:18},{label:'18–24',pct:15},{label:'55+',pct:15}
+  ], [
+    {label:'60–80th',pct:28},{label:'40–60th',pct:25},{label:'20–40th',pct:18},{label:'0–20th',pct:12},{label:'Top 10%',pct:17}
+  ]);
+
+  // Fetch data
+  if (sheetsApiKey && client.sheetId) {
+    fetchSheetData();
+  } else {
+    setConnStatus(false, 'No API key — configure in Settings');
+  }
+
+  // Init maps
+  if (mapboxToken) initMaps();
+}
+
+function logout() {
+  LS.del('link_session');
+  currentClient = null;
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('auth-pw-input').value = '';
+  document.getElementById('auth-error').classList.remove('show');
+}
+
+// Check for existing session on load
+window.addEventListener('DOMContentLoaded', () => {
+  // Check if there's a session
+  const sessionId = LS.get('link_session');
+  const clients = getClients();
+
+  // Seed demo client if first run
+  if (clients.length === 0) {
+    const demo = {
+      id: 'demo',
+      name: 'Acme Corporation',
+      password: 'demo123',
+      sheetId: '',
+      period: 'March 2025',
+      title: 'Google Search Snapshot Report',
+    };
+    saveClients([demo]);
+    setTimeout(() => toast('Welcome! A demo client has been created. Password: demo123', ''), 100);
+  }
+
+  if (sessionId) {
+    const client = getClients().find(c => c.id === sessionId);
+    if (client) { bootClient(client); return; }
+  }
+
+  document.getElementById('auth-screen').style.display = 'flex';
+
+  // Auth event listeners
+  document.getElementById('auth-btn').addEventListener('click', () => {
+    tryLogin(document.getElementById('auth-pw-input').value);
+  });
+  document.getElementById('auth-pw-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') tryLogin(e.target.value);
+    document.getElementById('auth-error').classList.remove('show');
+    e.target.style.borderColor = '';
+  });
+});
+
+/* ══════════════════════════════════════
+   FOOTER
+══════════════════════════════════════ */
+function applyFooter(client) {
+  document.getElementById('footer-client').textContent = client.name || '—';
+  const a1n = client.author1Name || '';
+  const a1t = client.author1Title || '';
+  const a2n = client.author2Name || '';
+  const a2t = client.author2Title || '';
+  let html = '';
+  if (a1n) html += `<b>${escHtml(a1n)}</b>${a1t ? ', ' + escHtml(a1t) : ''}`;
+  if (a1n && a2n) html += ', and<br>';
+  if (a2n) html += `<b>${escHtml(a2n)}</b>${a2t ? ', ' + escHtml(a2t) : ''}`;
+  document.getElementById('footer-authors').innerHTML = html ||
+    '<span style="opacity:.4">No authors configured — add in Settings</span>';
+  applyFooterLogo();
+}
+
+function applyFooterLogo() {
+  const dataUrl = getFooterLogo();
+  const img = document.getElementById('footer-logo-img');
+  const txt = document.getElementById('footer-logo-text');
+  if (dataUrl) {
+    img.src = dataUrl; img.style.display = 'block'; txt.style.display = 'none';
+  } else {
+    img.style.display = 'none'; txt.style.display = '';
+  }
+}
+
+/* ══════════════════════════════════════
+   LOGO UPLOAD
+══════════════════════════════════════ */
+function applyLogo(clientId) {
+  const dataUrl = getClientLogo(clientId);
+  const img = document.getElementById('logo-img');
+  const txt = document.getElementById('logo-text');
+  const authImg = document.getElementById('auth-logo-img');
+  const authTxt = document.getElementById('auth-logo-text');
+  if (dataUrl) {
+    img.src = dataUrl; img.style.display = 'block'; txt.style.display = 'none';
+    authImg.src = dataUrl; authImg.style.display = 'block'; authTxt.style.display = 'none';
+  } else {
+    img.style.display = 'none'; txt.style.display = '';
+    authImg.style.display = 'none'; authTxt.style.display = '';
+  }
+}
+
+// Logo listeners — moved inside DOMContentLoaded in settings block below
+
+/* ══════════════════════════════════════
+   GOOGLE SHEETS DATA FETCH
+══════════════════════════════════════ */
+async function fetchSheetData() {
+  if (!currentClient || !sheetsApiKey || !currentClient.sheetId) return;
+  const mapping = getMapping(currentClient.id);
+  if (!Object.keys(mapping).length) {
+    setConnStatus(false, 'No cell mapping configured');
+    return;
+  }
+
+  setRefreshing(true);
+
+  const results = {};
+  const sheetId = currentClient.sheetId;
+
+  // Collect all unique ranges to fetch
+  const rangesToFetch = [...new Set(Object.values(mapping).filter(Boolean))];
+  if (!rangesToFetch.length) {
+    setRefreshing(false);
+    setConnStatus(false, 'No ranges mapped');
+    return;
+  }
+
+  try {
+    // Batch fetch using batchGet
+    const rangesParam = rangesToFetch.map(r => 'ranges=' + encodeURIComponent(r)).join('&');
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchGet?${rangesParam}&key=${sheetsApiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error?.message || 'Sheets API error');
+    }
+    const data = await res.json();
+
+    // Build a lookup: range → values
+    const rangeData = {};
+    (data.valueRanges || []).forEach(vr => {
+      // normalize the range key (Sheets may return different casing)
+      const key = (vr.range || '').split('!').pop() || vr.range;
+      rangeData[vr.range] = vr.values || [];
+    });
+
+    // Map range responses back by iterating valueRanges in order
+    const rangeIndex = {};
+    (data.valueRanges || []).forEach((vr, i) => {
+      rangeIndex[rangesToFetch[i]] = vr.values || [];
+    });
+
+    // Apply data to UI
+    applySheetData(mapping, rangeIndex);
+    setConnStatus(true, 'Connected to Google Sheets');
+    setLastRefreshed();
+    toast('Data refreshed', 'success');
+  } catch(err) {
+    console.error(err);
+    setConnStatus(false, 'Error: ' + err.message);
+    toast('Refresh failed: ' + err.message, 'error');
+  } finally {
+    setRefreshing(false);
+  }
+}
+
+function applySheetData(mapping, rangeIndex) {
+  function val(fieldId) {
+    const range = mapping[fieldId];
+    if (!range) return null;
+    const rows = rangeIndex[range];
+    if (!rows || !rows.length) return null;
+    return rows[0][0] ?? null;
+  }
+  function rows(fieldId) {
+    const range = mapping[fieldId];
+    if (!range) return null;
+    return rangeIndex[range] || null;
+  }
+
+  // KPIs
+  setKpiVal('kpi-clicks', val('kpi_clicks'));
+  setKpiTrend('kpi-clicks-trend', 'kpi-clicks-tlbl', val('kpi_clicks_trend'), val('kpi_tlbl'));
+  setKpiVal('kpi-impressions', val('kpi_impr'));
+  setKpiTrend('kpi-impressions-trend', 'kpi-impressions-tlbl', val('kpi_impr_trend'), val('kpi_tlbl'));
+  setKpiVal('kpi-ctr', val('kpi_ctr'));
+  setKpiTrend('kpi-ctr-trend', 'kpi-ctr-tlbl', val('kpi_ctr_trend'), val('kpi_tlbl'));
+  setKpiVal('kpi-cpc', val('kpi_cpc'));
+  setKpiTrend('kpi-cpc-trend', 'kpi-cpc-tlbl', val('kpi_cpc_trend'), val('kpi_tlbl'));
+
+  // Period
+  const period = val('period');
+  if (period) {
+    document.getElementById('period-text').textContent = period;
+    // period only updates the period bar, not the header subtitle
+  }
+
+  // Keywords
+  const kwRows = rows('kw_range');
+  if (kwRows && kwRows.length) renderKeywordBars(kwRows);
+
+  // Zip bars
+  const zipImpr = rows('zip_impr_range');
+  if (zipImpr && zipImpr.length) renderZipBars('zip-impressions-bars', zipImpr);
+  const zipClicks = rows('zip_clicks_range');
+  if (zipClicks && zipClicks.length) {
+    renderZipBars('zip-clicks-bars', zipClicks);
+    if (mapboxToken) updateMaps(zipImpr, zipClicks);
+  }
+
+  // Demographics
+  const genderRows = rows('demo_gender');
+  const ageRows = rows('demo_age');
+  const incomeRows = rows('demo_income');
+  if (genderRows || ageRows || incomeRows) {
+    renderDonuts(
+      genderRows ? parseDemo(genderRows) : null,
+      ageRows    ? parseDemo(ageRows)    : null,
+      incomeRows ? parseDemo(incomeRows) : null
+    );
+  }
+}
+
+function parseDemo(rows) {
+  return rows.map(r => ({label: r[0]||'', pct: parseFloat(r[1])||0})).filter(r => r.label);
+}
+
+function setKpiVal(id, val) {
+  if (val !== null && val !== undefined) document.getElementById(id).textContent = val;
+}
+
+function setKpiTrend(trendId, lblId, trendVal, lblVal) {
+  const el = document.getElementById(trendId);
+  const lbl = document.getElementById(lblId);
+  if (trendVal) {
+    el.style.display = '';
+    el.textContent = trendVal;
+    // Detect direction from value string
+    const isDown = trendVal.includes('↓') || trendVal.startsWith('-');
+    el.className = isDown ? 'tdn' : 'tup';
+  }
+  if (lblVal) lbl.textContent = lblVal;
+}
+
+/* ══════════════════════════════════════
+   UI STATE HELPERS
+══════════════════════════════════════ */
+function setConnStatus(online, label) {
+  const dot = document.getElementById('conn-dot');
+  const lbl = document.getElementById('conn-label');
+  dot.className = 'ldot' + (online ? '' : ' offline');
+  lbl.textContent = label || (online ? 'Connected' : 'Disconnected');
+}
+
+function setRefreshing(on) {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = on;
+  btn.innerHTML = on ? '<span class="spinner"></span>Refreshing…' : '↻ Refresh';
+}
+
+function setLastRefreshed() {
+  const now = new Date();
+  const t = now.toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+  document.getElementById('last-refreshed').textContent = 'Last refreshed ' + t;
+}
+
+/* ══════════════════════════════════════
+   KEYWORD BAR CHART
+══════════════════════════════════════ */
+function renderKeywordBars(kwRows) {
+  const container = document.getElementById('kw-bar-list');
+  container.innerHTML = '';
+  const max = Math.max(...kwRows.map(r => parseFloat(r[1])||0)) || 1;
+  kwRows.slice(0,10).forEach((row, i) => {
+    const kw = row[0] || '';
+    const clicks = parseFloat(row[1]) || 0;
+    const pct = Math.round((clicks / max) * 100);
+    const div = document.createElement('div');
+    div.className = 'brow';
+    div.innerHTML = `
+      <div class="bkw">${escHtml(kw)}</div>
+      <div class="btrack">
+        <div class="bfill" style="width:${pct}%;background:#e8382d">
+          ${clicks.toLocaleString()}
+        </div>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+/* ══════════════════════════════════════
+   ZIP CODE BAR CHARTS
+══════════════════════════════════════ */
+function renderZipBars(containerId, zipRows) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  const max = Math.max(...zipRows.map(r => parseFloat(r[1])||0)) || 1;
+  zipRows.slice(0,10).forEach((row, i) => {
+    const zip = row[0] || '';
+    const val = parseFloat(row[1]) || 0;
+    const pct = Math.round((val / max) * 100);
+    const div = document.createElement('div');
+    div.className = 'brow';
+    div.innerHTML = `
+      <div class="bkw-sm">${escHtml(zip)}</div>
+      <div class="btrack">
+        <div class="bfill" style="width:${pct}%;background:#e8382d">
+          ${val.toLocaleString()}
+        </div>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+/* ══════════════════════════════════════
+   DONUT CHARTS (Chart.js)
+══════════════════════════════════════ */
+const DONUT_PALETTE = [
+  '#e8382d',  // LINK red — dominant segment
+  '#94a3b8',  // slate
+  '#1a1c24',  // dark
+  '#cbd5e1',  // light slate
+  '#64748b',  // mid slate
+  '#f1f5f9',  // near white
+  '#c92e24',  // deep red
+  '#475569',  // dark slate
+  '#e2e8f0',  // pale slate
+];
+
+function renderDonuts(genderData, ageData, incomeData) {
+  renderSingleDonut('donut-gender', 'dleg-gender', genderData || [
+    {label:'Male',pct:52},{label:'Female',pct:46},{label:'Unknown',pct:2}
+  ]);
+  renderSingleDonut('donut-age', 'dleg-age', ageData || [
+    {label:'25–34',pct:28},{label:'35–44',pct:24},{label:'45–54',pct:18},{label:'18–24',pct:15},{label:'55+',pct:15}
+  ]);
+  renderSingleDonut('donut-income', 'dleg-income', incomeData || [
+    {label:'60–80th',pct:28},{label:'40–60th',pct:25},{label:'20–40th',pct:18},{label:'0–20th',pct:12},{label:'Top 10%',pct:17}
+  ]);
+}
+
+function renderSingleDonut(canvasId, legId, data) {
+  if (donutCharts[canvasId]) donutCharts[canvasId].destroy();
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  const labels = data.map(d => d.label);
+  const values = data.map(d => d.pct);
+  const colors = data.map((_, i) => DONUT_PALETTE[i % DONUT_PALETTE.length]);
+
+  donutCharts[canvasId] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }] },
+    options: {
+      cutout: '62%',
+      plugins: { legend: { display: false }, tooltip: { enabled: true } },
+      animation: { duration: 600 },
+    }
+  });
+
+  // Legend
+  const leg = document.getElementById(legId);
+  leg.innerHTML = data.slice(0,4).map((d, i) =>
+    `<div class="dli"><div class="dldt" style="background:${colors[i]}"></div><span>${escHtml(d.label)}</span><span class="dli-pct">${d.pct}%</span></div>`
+  ).join('');
+}
+
+/* ══════════════════════════════════════
+   MAPBOX MAPS — Census TIGER GeoJSON (free)
+══════════════════════════════════════ */
+
+// Zip prefix → Census state FIPS code (for eric.clst.org state-level files)
+// Keys are 1–3 digit zip prefixes; value is the state abbreviation used in the URL
+const ZIP_STATE_MAP = {
+  '0': 'ct_ri',  // CT/RI share some 0xx prefixes — we use a combined approach
+  '00': 'pr',    // Puerto Rico
+  '006': 'pr','007': 'pr',
+  '008': 'vi',   // USVI
+  '009': 'pr',
+  '01': 'ma','02': 'ma','024': 'ri','028': 'ri','029': 'ri',
+  '03': 'nh','04': 'me','05': 'vt',
+  '06': 'ct','068': 'ny','069': 'ny',
+  '07': 'nj','08': 'nj',
+  '09': 'ny', // military/APO — fallback ny
+  '10': 'ny','11': 'ny','12': 'ny','13': 'ny','14': 'ny',
+  '15': 'pa','16': 'pa','17': 'pa','18': 'pa','19': 'pa',
+  '20': 'dc','202': 'dc','203': 'dc','204': 'dc',
+  '205': 'dc','206': 'dc','207': 'md','208': 'md','209': 'md',
+  '210': 'md','211': 'md','212': 'md','214': 'md','215': 'md',
+  '216': 'md','217': 'md','218': 'md','219': 'md',
+  '220': 'va','221': 'va','222': 'va','223': 'va','224': 'va',
+  '225': 'va','226': 'va','227': 'va','228': 'va','229': 'va',
+  '230': 'va','231': 'va','232': 'va','233': 'va','234': 'va',
+  '235': 'va','236': 'va','237': 'va','238': 'va','239': 'va',
+  '240': 'va','241': 'va','242': 'va','243': 'va','244': 'va',
+  '245': 'va','246': 'va',
+  '247': 'wv','248': 'wv','249': 'wv','250': 'wv','251': 'wv',
+  '252': 'wv','253': 'wv','254': 'wv','255': 'wv','256': 'wv',
+  '257': 'wv','258': 'wv','259': 'wv','260': 'wv','261': 'wv',
+  '262': 'wv','263': 'wv','264': 'wv','265': 'wv','266': 'wv',
+  '267': 'wv','268': 'wv',
+  '270': 'nc','271': 'nc','272': 'nc','273': 'nc','274': 'nc',
+  '275': 'nc','276': 'nc','277': 'nc','278': 'nc','279': 'nc',
+  '280': 'nc','281': 'nc','282': 'nc','283': 'nc','284': 'nc',
+  '285': 'nc','286': 'nc','287': 'nc','288': 'nc','289': 'nc',
+  '290': 'sc','291': 'sc','292': 'sc','293': 'sc','294': 'sc',
+  '295': 'sc','296': 'sc','297': 'sc','298': 'sc','299': 'sc',
+  '300': 'ga','301': 'ga','302': 'ga','303': 'ga','304': 'ga',
+  '305': 'ga','306': 'ga','307': 'ga','308': 'ga','309': 'ga',
+  '310': 'ga','311': 'ga','312': 'ga','313': 'ga','314': 'ga',
+  '315': 'ga','316': 'ga','317': 'ga','318': 'ga','319': 'ga',
+  '320': 'fl','321': 'fl','322': 'fl','323': 'fl','324': 'fl',
+  '325': 'fl','326': 'fl','327': 'fl','328': 'fl','329': 'fl',
+  '330': 'fl','331': 'fl','332': 'fl','333': 'fl','334': 'fl',
+  '335': 'fl','336': 'fl','337': 'fl','338': 'fl','339': 'fl',
+  '340': 'fl','341': 'fl','342': 'fl','344': 'fl','346': 'fl',
+  '347': 'fl','349': 'fl',
+  '350': 'al','351': 'al','352': 'al','354': 'al','355': 'al',
+  '356': 'al','357': 'al','358': 'al','359': 'al','360': 'al',
+  '361': 'al','362': 'al','363': 'al','364': 'al','365': 'al',
+  '366': 'al','367': 'al','368': 'al','369': 'al',
+  '370': 'tn','371': 'tn','372': 'tn','373': 'tn','374': 'tn',
+  '375': 'tn','376': 'tn','377': 'tn','378': 'tn','379': 'tn',
+  '380': 'tn','381': 'tn','382': 'tn','383': 'tn','384': 'tn',
+  '385': 'tn',
+  '386': 'ms','387': 'ms','388': 'ms','389': 'ms','390': 'ms',
+  '391': 'ms','392': 'ms','393': 'ms','394': 'ms','395': 'ms',
+  '396': 'ms','397': 'ms',
+  '398': 'ga','399': 'ga',
+  '400': 'ky','401': 'ky','402': 'ky','403': 'ky','404': 'ky',
+  '405': 'ky','406': 'ky','407': 'ky','408': 'ky','409': 'ky',
+  '410': 'ky','411': 'ky','412': 'ky','413': 'ky','414': 'ky',
+  '415': 'ky','416': 'ky','417': 'ky','418': 'ky',
+  '420': 'ky','421': 'ky','422': 'ky','423': 'ky','424': 'ky',
+  '425': 'ky','426': 'ky','427': 'ky',
+  '430': 'oh','431': 'oh','432': 'oh','433': 'oh','434': 'oh',
+  '435': 'oh','436': 'oh','437': 'oh','438': 'oh','439': 'oh',
+  '440': 'oh','441': 'oh','442': 'oh','443': 'oh','444': 'oh',
+  '445': 'oh','446': 'oh','447': 'oh','448': 'oh','449': 'oh',
+  '450': 'oh','451': 'oh','452': 'oh','453': 'oh','454': 'oh',
+  '455': 'oh','456': 'oh','457': 'oh','458': 'oh',
+  '460': 'in','461': 'in','462': 'in','463': 'in','464': 'in',
+  '465': 'in','466': 'in','467': 'in','468': 'in','469': 'in',
+  '470': 'in','471': 'in','472': 'in','473': 'in','474': 'in',
+  '475': 'in','476': 'in','477': 'in','478': 'in','479': 'in',
+  '480': 'mi','481': 'mi','482': 'mi','483': 'mi','484': 'mi',
+  '485': 'mi','486': 'mi','487': 'mi','488': 'mi','489': 'mi',
+  '490': 'mi','491': 'mi','492': 'mi','493': 'mi','494': 'mi',
+  '495': 'mi','496': 'mi','497': 'mi','498': 'mi','499': 'mi',
+  '500': 'ia','501': 'ia','502': 'ia','503': 'ia','504': 'ia',
+  '505': 'ia','506': 'ia','507': 'ia','508': 'ia','509': 'ia',
+  '510': 'ia','511': 'ia','512': 'ia','513': 'ia','514': 'ia',
+  '515': 'ia','516': 'ia','520': 'ia','521': 'ia','522': 'ia',
+  '523': 'ia','524': 'ia','525': 'ia','526': 'ia','527': 'ia',
+  '528': 'ia',
+  '530': 'wi','531': 'wi','532': 'wi','534': 'wi','535': 'wi',
+  '537': 'wi','538': 'wi','539': 'wi','540': 'wi','541': 'wi',
+  '542': 'wi','543': 'wi','544': 'wi','545': 'wi','546': 'wi',
+  '547': 'wi','548': 'wi','549': 'wi',
+  '550': 'mn','551': 'mn','553': 'mn','554': 'mn','555': 'mn',
+  '556': 'mn','557': 'mn','558': 'mn','559': 'mn','560': 'mn',
+  '561': 'mn','562': 'mn','563': 'mn','564': 'mn','565': 'mn',
+  '566': 'mn','567': 'mn',
+  '570': 'sd','571': 'sd','572': 'sd','573': 'sd','574': 'sd',
+  '575': 'sd','576': 'sd','577': 'sd',
+  '580': 'nd','581': 'nd','582': 'nd','583': 'nd','584': 'nd',
+  '585': 'nd','586': 'nd','587': 'nd','588': 'nd',
+  '590': 'mt','591': 'mt','592': 'mt','593': 'mt','594': 'mt',
+  '595': 'mt','596': 'mt','597': 'mt','598': 'mt','599': 'mt',
+  '600': 'il','601': 'il','602': 'il','603': 'il','604': 'il',
+  '605': 'il','606': 'il','607': 'il','608': 'il','609': 'il',
+  '610': 'il','611': 'il','612': 'il','613': 'il','614': 'il',
+  '615': 'il','616': 'il','617': 'il','618': 'il','619': 'il',
+  '620': 'il','622': 'il','623': 'il','624': 'il','625': 'il',
+  '626': 'il','627': 'il','628': 'il','629': 'il',
+  '630': 'mo','631': 'mo','633': 'mo','634': 'mo','635': 'mo',
+  '636': 'mo','637': 'mo','638': 'mo','639': 'mo','640': 'mo',
+  '641': 'mo','644': 'mo','645': 'mo','646': 'mo','647': 'mo',
+  '648': 'mo','649': 'mo','650': 'mo','651': 'mo','652': 'mo',
+  '653': 'mo','654': 'mo','655': 'mo','656': 'mo','657': 'mo',
+  '658': 'mo',
+  '660': 'ks','661': 'ks','662': 'ks','664': 'ks','665': 'ks',
+  '666': 'ks','667': 'ks','668': 'ks','669': 'ks','670': 'ks',
+  '671': 'ks','672': 'ks','673': 'ks','674': 'ks','675': 'ks',
+  '676': 'ks','677': 'ks','678': 'ks','679': 'ks',
+  '680': 'ne','681': 'ne','683': 'ne','684': 'ne','685': 'ne',
+  '686': 'ne','687': 'ne','688': 'ne','689': 'ne','690': 'ne',
+  '691': 'ne','692': 'ne','693': 'ne',
+  '700': 'la','701': 'la','703': 'la','704': 'la','705': 'la',
+  '706': 'la','707': 'la','708': 'la','710': 'la','711': 'la',
+  '712': 'la','713': 'la','714': 'la',
+  '716': 'ar','717': 'ar','718': 'ar','719': 'ar','720': 'ar',
+  '721': 'ar','722': 'ar','723': 'ar','724': 'ar','725': 'ar',
+  '726': 'ar','727': 'ar','728': 'ar','729': 'ar',
+  '730': 'ok','731': 'ok','733': 'ok','734': 'ok','735': 'ok',
+  '736': 'ok','737': 'ok','738': 'ok','739': 'ok','740': 'ok',
+  '741': 'ok','743': 'ok','744': 'ok','745': 'ok','746': 'ok',
+  '747': 'ok','748': 'ok','749': 'ok',
+  '750': 'tx','751': 'tx','752': 'tx','753': 'tx','754': 'tx',
+  '755': 'tx','756': 'tx','757': 'tx','758': 'tx','759': 'tx',
+  '760': 'tx','761': 'tx','762': 'tx','763': 'tx','764': 'tx',
+  '765': 'tx','766': 'tx','767': 'tx','768': 'tx','769': 'tx',
+  '770': 'tx','771': 'tx','772': 'tx','773': 'tx','774': 'tx',
+  '775': 'tx','776': 'tx','777': 'tx','778': 'tx','779': 'tx',
+  '780': 'tx','781': 'tx','782': 'tx','783': 'tx','784': 'tx',
+  '785': 'tx','786': 'tx','787': 'tx','788': 'tx','789': 'tx',
+  '790': 'tx','791': 'tx','792': 'tx','793': 'tx','794': 'tx',
+  '795': 'tx','796': 'tx','797': 'tx','798': 'tx','799': 'tx',
+  '800': 'co','801': 'co','802': 'co','803': 'co','804': 'co',
+  '805': 'co','806': 'co','807': 'co','808': 'co','809': 'co',
+  '810': 'co','811': 'co','812': 'co','813': 'co','814': 'co',
+  '815': 'co','816': 'co',
+  '820': 'wy','821': 'wy','822': 'wy','823': 'wy','824': 'wy',
+  '825': 'wy','826': 'wy','827': 'wy','828': 'wy','829': 'wy',
+  '830': 'wy','831': 'wy',
+  '832': 'id','833': 'id','834': 'id','835': 'id','836': 'id',
+  '837': 'id','838': 'id',
+  '840': 'ut','841': 'ut','842': 'ut','843': 'ut','844': 'ut',
+  '845': 'ut','846': 'ut','847': 'ut',
+  '850': 'az','851': 'az','852': 'az','853': 'az','855': 'az',
+  '856': 'az','857': 'az','859': 'az','860': 'az','863': 'az',
+  '864': 'az','865': 'az',
+  '870': 'nm','871': 'nm','872': 'nm','873': 'nm','874': 'nm',
+  '875': 'nm','877': 'nm','878': 'nm','879': 'nm','880': 'nm',
+  '881': 'nm','882': 'nm','883': 'nm','884': 'nm',
+  '885': 'tx',
+  '889': 'nv','890': 'nv','891': 'nv','893': 'nv','894': 'nv',
+  '895': 'nv','896': 'nv','897': 'nv','898': 'nv',
+  '900': 'ca','901': 'ca','902': 'ca','903': 'ca','904': 'ca',
+  '905': 'ca','906': 'ca','907': 'ca','908': 'ca','910': 'ca',
+  '911': 'ca','912': 'ca','913': 'ca','914': 'ca','915': 'ca',
+  '916': 'ca','917': 'ca','918': 'ca','919': 'ca','920': 'ca',
+  '921': 'ca','922': 'ca','923': 'ca','924': 'ca','925': 'ca',
+  '926': 'ca','927': 'ca','928': 'ca','930': 'ca','931': 'ca',
+  '932': 'ca','933': 'ca','934': 'ca','935': 'ca','936': 'ca',
+  '937': 'ca','938': 'ca','939': 'ca','940': 'ca','941': 'ca',
+  '942': 'ca','943': 'ca','944': 'ca','945': 'ca','946': 'ca',
+  '947': 'ca','948': 'ca','949': 'ca','950': 'ca','951': 'ca',
+  '952': 'ca','953': 'ca','954': 'ca','955': 'ca','956': 'ca',
+  '957': 'ca','958': 'ca','959': 'ca','960': 'ca','961': 'ca',
+  '962': 'ap','963': 'ap','964': 'ap','965': 'ap','966': 'ap',
+  '967': 'hi','968': 'hi',
+  '969': 'gu',
+  '970': 'or','971': 'or','972': 'or','973': 'or','974': 'or',
+  '975': 'or','976': 'or','977': 'or','978': 'or','979': 'or',
+  '980': 'wa','981': 'wa','982': 'wa','983': 'wa','984': 'wa',
+  '985': 'wa','986': 'wa','988': 'wa','989': 'wa','990': 'wa',
+  '991': 'wa','992': 'wa','993': 'wa','994': 'wa',
+  '995': 'ak','996': 'ak','997': 'ak','998': 'ak','999': 'ak',
+};
+
+// Resolve which state file(s) to fetch for a set of zip codes
+function getStatesForZips(zips) {
+  const states = new Set();
+  zips.forEach(zip => {
+    const z = String(zip).padStart(5, '0');
+    // Try 3-digit prefix, then 2-digit, then 1-digit
+    const s = ZIP_STATE_MAP[z.slice(0,3)] || ZIP_STATE_MAP[z.slice(0,2)] || ZIP_STATE_MAP[z.slice(0,1)];
+    if (s) states.add(s);
+  });
+  return [...states];
+}
+
+// Cache fetched GeoJSON by state key
+const geojsonCache = {};
+
+async function fetchZipGeoJSON(zips) {
+  // Census TIGERweb REST API — CORS-enabled, no subscription required.
+  // We query only the specific ZCTAs we need, keeping payloads small.
+  // Endpoint: https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer/2/query
+  // Layer 2 = Zip Code Tabulation Areas (ZCTAs)
+
+  // Build cache key from sorted zip list
+  const cacheKey = [...zips].sort().join(',');
+  if (geojsonCache[cacheKey]) return geojsonCache[cacheKey];
+
+  // TIGERweb accepts a WHERE clause filtering by ZCTA5CE10
+  // Batch in groups of 50 to stay within URL length limits
+  const batches = [];
+  const zipArr = [...zips];
+  for (let i = 0; i < zipArr.length; i += 50) {
+    batches.push(zipArr.slice(i, i + 50));
+  }
+
+  const allFeatures = [];
+  for (const batch of batches) {
+    // Use GEOID field which is the reliable zip identifier on TIGERweb ZCTA layer.
+    // We also try ZCTA5CE10 as the WHERE field and request all fields (*) so we
+    // can inspect exactly what property names come back.
+    const zipsFormatted = batch.map(z => String(z).padStart(5,'0'));
+    // Correct service: PUMA_TAD_TAZ_UGA_ZCTA, layer 4 = 2020 Census ZCTAs
+    // Confirmed field name: ZCTA5 (also has GEOID as fallback)
+    const where = "ZCTA5 IN ('" + zipsFormatted.join("','") + "')";
+    const params = new URLSearchParams({
+      where,
+      outFields: 'ZCTA5,GEOID',
+      inSR: '4326',
+      outSR: '4326',
+      f: 'geojson',
+      returnGeometry: 'true',
+      geometryPrecision: '6',
+    });
+    const url = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/PUMA_TAD_TAZ_UGA_ZCTA/MapServer/4/query?' + params;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Census TIGERweb error (' + res.status + ')');
+    const data = await res.json();
+    if (data.features && data.features.length > 0) {
+      // Log first feature's properties so we know the exact field names
+      console.log('[TIGERweb] First feature properties:', JSON.stringify(data.features[0].properties));
+      allFeatures.push(...data.features);
+    } else {
+      console.warn('[TIGERweb] No features returned for batch:', zipsFormatted, 'Response:', JSON.stringify(data).slice(0,300));
+    }
+  }
+
+  const geojson = { type: 'FeatureCollection', features: allFeatures };
+  geojsonCache[cacheKey] = geojson;
+  return geojson;
+}
+
+// Filter GeoJSON to only the zips we care about
+function filterGeoJSON(geojson, zipSet) {
+  return {
+    type: 'FeatureCollection',
+    features: geojson.features.filter(f => {
+      const p = f.properties || {};
+      const z = p.ZCTA5 || p.GEOID || p.ZCTA5CE || p.ZCTA5CE10 || p.ZIP || p.zip || '';
+      const match = zipSet.has(String(z).padStart(5,'0'));
+      if (!match && z) console.log('[filterGeoJSON] No match for:', z, '| Props:', JSON.stringify(p));
+      return match;
+    })
+  };
+}
+
+let mapsInitialized = false;
+let pendingMapData = null; // {zipImprRows, zipClickRows} — stored if maps not ready yet
+
+function initMaps() {
+  if (!mapboxToken || !window.mapboxgl) return;
+  mapboxgl.accessToken = mapboxToken;
+
+  const commonOpts = {
+    style: 'mapbox://styles/mapbox/light-v11',
+    center: [-77.0369, 38.9072],
+    zoom: 10,
+    attributionControl: false,
+  };
+
+  // Clear placeholders
+  ['map-impressions','map-clicks'].forEach(id => {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    el.classList.remove('map-placeholder');
+  });
+
+  mapImpressions = new mapboxgl.Map({ container: 'map-impressions', ...commonOpts });
+  mapClicks      = new mapboxgl.Map({ container: 'map-clicks',      ...commonOpts });
+
+  [mapImpressions, mapClicks].forEach(m => {
+    m.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+  });
+
+  // Wait for both maps to be ready
+  let loadedCount = 0;
+  [mapImpressions, mapClicks].forEach(m => {
+    m.on('load', () => {
+      loadedCount++;
+      if (loadedCount === 2) {
+        mapsInitialized = true;
+        if (pendingMapData) {
+          const {zipImprRows, zipClickRows} = pendingMapData;
+          pendingMapData = null;
+          _paintBothMaps(zipImprRows, zipClickRows);
+        }
+      }
+    });
+  });
+}
+
+async function updateMaps(zipImprRows, zipClickRows) {
+  if (!mapboxToken || !window.mapboxgl) return;
+  if (!mapsInitialized) {
+    // Maps not ready yet — store data and paint once they load
+    pendingMapData = {zipImprRows, zipClickRows};
+    return;
+  }
+  _paintBothMaps(zipImprRows, zipClickRows);
+}
+
+function _setMapLoading(on) {
+  ['map-impressions','map-clicks'].forEach(id => {
+    const el = document.getElementById(id);
+    const existing = el.querySelector('.map-loading');
+    if (on && !existing) {
+      const div = document.createElement('div');
+      div.className = 'map-loading';
+      div.innerHTML = '<span class="spinner" style="border-top-color:var(--red);border-color:rgba(232,56,45,0.2);border-top-color:var(--red)"></span> Loading boundaries…';
+      el.appendChild(div);
+    } else if (!on && existing) {
+      existing.remove();
+    }
+  });
+}
+
+async function _paintBothMaps(zipImprRows, zipClickRows) {
+  // Collect all unique zips across both datasets
+  const allZips = new Set([
+    ...(zipImprRows  || []).map(r => String(r[0]).padStart(5,'0')),
+    ...(zipClickRows || []).map(r => String(r[0]).padStart(5,'0')),
+  ]);
+
+  // Show loading indicator on both map containers while fetching boundaries
+  _setMapLoading(true);
+
+  let fullGeoJSON;
+  try {
+    fullGeoJSON = await fetchZipGeoJSON([...allZips]);
+  } catch(err) {
+    _setMapLoading(false);
+    console.error('GeoJSON fetch failed:', err);
+    toast('Map boundary data unavailable: ' + err.message, 'error');
+    return;
+  }
+
+  console.log('[Maps] Total features from TIGERweb:', fullGeoJSON.features.length, '| Zips requested:', [...allZips]);
+  const filtered = filterGeoJSON(fullGeoJSON, allZips);
+  console.log('[Maps] Features after filter:', filtered.features.length);
+  if (!filtered.features.length) {
+    toast('No matching zip boundaries found — check console for details', 'error');
+    return;
+  }
+
+  // Paint each map
+  _paintMap(mapImpressions, filtered, zipImprRows,  'impressions', 'Ad Impressions');
+  _paintMap(mapClicks,      filtered, zipClickRows, 'clicks',      'Ad Clicks');
+  _setMapLoading(false);
+
+  // Fit both maps to the zip boundary extent
+  const bbox = getBbox(filtered);
+  if (bbox) {
+    [mapImpressions, mapClicks].forEach(m => {
+      m.fitBounds(bbox, { padding: 28, duration: 800 });
+    });
+  } else {
+    // Fallback: use CENTLAT/CENTLON string properties from TIGERweb
+    const centers = filtered.features
+      .map(f => [parseFloat(f.properties.CENTLON), parseFloat(f.properties.CENTLAT)])
+      .filter(([lng, lat]) => !isNaN(lng) && !isNaN(lat));
+    if (centers.length) {
+      const lngs = centers.map(c => c[0]);
+      const lats = centers.map(c => c[1]);
+      const fallbackBbox = [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ];
+      console.log('[Maps] Using CENTLAT/CENTLON fallback bbox:', fallbackBbox);
+      [mapImpressions, mapClicks].forEach(m => {
+        m.fitBounds(fallbackBbox, { padding: 60, duration: 800 });
+      });
+    }
+  }
+}
+
+function _paintMap(map, geojson, rows, sourceId, labelPrefix) {
+  if (!map || !rows) return;
+
+  // Build value lookup: zip → numeric value
+  const valMap = {};
+  rows.forEach(r => { valMap[String(r[0]).padStart(5,'0')] = parseFloat(r[1]) || 0; });
+  const max = Math.max(...Object.values(valMap)) || 1;
+
+  // Attach value to each feature as a property
+  const painted = {
+    type: 'FeatureCollection',
+    features: geojson.features.map(f => {
+      const zip = String(f.properties.ZCTA5 || f.properties.GEOID || f.properties.ZCTA5CE || f.properties.zip || '').padStart(5,'0');
+      return { ...f, properties: { ...f.properties, _zip: zip, _val: valMap[zip] || 0 } };
+    })
+  };
+
+  // Remove existing layers/source if present
+  ['zip-fill-' + sourceId, 'zip-outline-' + sourceId, 'zip-label-' + sourceId].forEach(id => {
+    if (map.getLayer(id)) map.removeLayer(id);
+  });
+  if (map.getSource(sourceId)) map.removeSource(sourceId);
+
+  map.addSource(sourceId, { type: 'geojson', data: painted });
+
+  map.addLayer({
+    id: 'zip-fill-' + sourceId,
+    type: 'fill',
+    source: sourceId,
+    paint: {
+      'fill-color': [
+        'interpolate', ['linear'], ['get', '_val'],
+        0,       'rgba(232,56,45,0.0)',
+        max*0.01,'rgba(232,56,45,0.08)',
+        max*0.3, 'rgba(232,56,45,0.28)',
+        max*0.6, 'rgba(232,56,45,0.55)',
+        max,     'rgba(232,56,45,0.85)',
+      ],
+      'fill-opacity': 0.85,
+    }
+  });
+
+  map.addLayer({
+    id: 'zip-outline-' + sourceId,
+    type: 'line',
+    source: sourceId,
+    paint: {
+      'line-color': 'rgba(232,56,45,0.3)',
+      'line-width': 1,
+    }
+  });
+
+  // Hover popup
+  const popup = new mapboxgl.Popup({ closeButton: false, closeOnClick: false, className: 'map-popup' });
+
+  map.on('mousemove', 'zip-fill-' + sourceId, e => {
+    map.getCanvas().style.cursor = 'pointer';
+    const props = e.features[0].properties;
+    const zip = props._zip || '';
+    const val = props._val || 0;
+    popup.setLngLat(e.lngLat)
+      .setHTML(`<div style="font-family:Montserrat,sans-serif;font-size:11px;font-weight:700;color:#1a1c24">
+        ${zip}<br><span style="color:#e8382d">${val.toLocaleString()}</span>
+        <span style="font-size:9px;font-weight:500;color:#6b7080;margin-left:2px">${labelPrefix}</span>
+      </div>`)
+      .addTo(map);
+  });
+  map.on('mouseleave', 'zip-fill-' + sourceId, () => {
+    map.getCanvas().style.cursor = '';
+    popup.remove();
+  });
+}
+
+// Compute bounding box of a GeoJSON FeatureCollection
+function getBbox(geojson) {
+  let minLng=Infinity, minLat=Infinity, maxLng=-Infinity, maxLat=-Infinity;
+  geojson.features.forEach(f => {
+    const coords = flattenCoords(f.geometry);
+    coords.forEach(([lng, lat]) => {
+      // Guard against NaN/projected coords (valid WGS84: lng -180..180, lat -90..90)
+      if (isNaN(lng) || isNaN(lat)) return;
+      if (Math.abs(lng) > 180 || Math.abs(lat) > 90) return;
+      if (lng < minLng) minLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lng > maxLng) maxLng = lng;
+      if (lat > maxLat) maxLat = lat;
+    });
+  });
+  if (!isFinite(minLng)) {
+    console.warn('[getBbox] No valid WGS84 coordinates found — skipping fitBounds');
+    return null;
+  }
+  return [[minLng, minLat], [maxLng, maxLat]];
+}
+
+function flattenCoords(geometry) {
+  if (!geometry) return [];
+  const t = geometry.type;
+  if (t === 'Polygon') return geometry.coordinates.flat();
+  if (t === 'MultiPolygon') return geometry.coordinates.flat(2);
+  return [];
+}
+
+/* ══════════════════════════════════════
+   SETTINGS PANEL
+══════════════════════════════════════ */
+let editingClientId = null; // null = new
+
+// All top-level event wiring deferred to DOMContentLoaded to guarantee DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+
+// Logo upload — header (client logo, per-client)
+document.getElementById('logo-box').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('logo-upload')) return;
+  document.getElementById('logo-upload').click();
+});
+document.getElementById('logo-upload').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file || !currentClient) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    saveClientLogo(currentClient.id, ev.target.result);
+    applyLogo(currentClient.id);
+    toast('Client logo updated', 'success');
+  };
+  reader.readAsDataURL(file);
+});
+
+// Logo upload — footer (agency logo, shared across all clients)
+document.getElementById('footer-logo-box').addEventListener('click', (e) => {
+  if (e.target.id === 'footer-logo-upload') return;
+  document.getElementById('footer-logo-upload').click();
+});
+document.getElementById('footer-logo-upload').addEventListener('click', (e) => {
+  e.stopPropagation();
+});
+document.getElementById('footer-logo-upload').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    saveFooterLogo(ev.target.result);
+    applyFooterLogo();
+    toast('Agency logo updated', 'success');
+  };
+  reader.readAsDataURL(file);
+});
+
+// Open/close
+document.getElementById('settings-btn').addEventListener('click', openSettings);
+document.getElementById('sp-close').addEventListener('click', () => {
+  document.getElementById('settings-overlay').classList.remove('open');
+});
+document.getElementById('settings-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('settings-overlay')) {
+    document.getElementById('settings-overlay').classList.remove('open');
+  }
+});
+
+function openSettings() {
+  renderClientList();
+  populateApiKeys();
+  populateMappingTab();
+  document.getElementById('settings-overlay').classList.add('open');
+}
+
+// Tab switching
+document.querySelectorAll('.sp-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.sp-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    ['clients','mapping','apikeys'].forEach(id => {
+      document.getElementById('tab-' + id).style.display = tab.dataset.tab === id ? '' : 'none';
+    });
+  });
+});
+
+// ── CLIENT LIST ──
+function renderClientList() {
+  const clients = getClients();
+  const list = document.getElementById('client-list');
+  list.innerHTML = '';
+  clients.forEach(c => {
+    const item = document.createElement('div');
+    item.className = 'client-item' + (currentClient && c.id === currentClient.id ? ' active' : '');
+    item.innerHTML = `
+      <div>
+        <div class="client-item-name">${escHtml(c.name || 'Unnamed')}</div>
+        <div class="client-item-meta">Sheet ID: ${c.sheetId ? c.sheetId.substring(0,20)+'…' : '(not set)'} · Period: ${escHtml(c.period||'—')}</div>
+      </div>
+      <div class="client-item-actions">
+        <button class="sp-btn sp-btn-ghost" data-id="${c.id}" data-action="edit" style="font-size:10px;padding:5px 12px">Edit</button>
+      </div>`;
+    item.querySelector('[data-action="edit"]').addEventListener('click', e => {
+      e.stopPropagation();
+      openClientEditor(c.id);
+    });
+    list.appendChild(item);
+  });
+  document.getElementById('client-editor').style.display = 'none';
+}
+
+document.getElementById('add-client-btn').addEventListener('click', () => openClientEditor(null));
+
+function openClientEditor(clientId) {
+  editingClientId = clientId;
+  const clients = getClients();
+  const c = clientId ? clients.find(x => x.id === clientId) : null;
+  document.getElementById('client-editor-title').textContent = clientId ? 'Edit Client' : 'New Client';
+  document.getElementById('ce-name').value = c?.name || '';
+  document.getElementById('ce-password').value = c?.password || '';
+  document.getElementById('ce-sheet-id').value = c?.sheetId || '';
+  document.getElementById('ce-period').value = c?.period || '';
+  document.getElementById('ce-title').value = c?.title || 'Google Search Snapshot Report';
+  document.getElementById('ce-author1-name').value = c?.author1Name || '';
+  document.getElementById('ce-author1-title').value = c?.author1Title || '';
+  document.getElementById('ce-author2-name').value = c?.author2Name || '';
+  document.getElementById('ce-author2-title').value = c?.author2Title || '';
+  document.getElementById('ce-delete').style.display = clientId ? '' : 'none';
+  document.getElementById('client-editor').style.display = '';
+  document.getElementById('client-list').style.display = 'none';
+  document.getElementById('add-client-btn').style.display = 'none';
+}
+
+document.getElementById('ce-cancel').addEventListener('click', () => {
+  document.getElementById('client-editor').style.display = 'none';
+  document.getElementById('client-list').style.display = '';
+  document.getElementById('add-client-btn').style.display = '';
+});
+
+document.getElementById('ce-save').addEventListener('click', () => {
+  const name = document.getElementById('ce-name').value.trim();
+  const password = document.getElementById('ce-password').value.trim();
+  if (!name || !password) { toast('Name and password are required', 'error'); return; }
+
+  const clients = getClients();
+  if (editingClientId) {
+    const idx = clients.findIndex(c => c.id === editingClientId);
+    if (idx >= 0) {
+      clients[idx] = { ...clients[idx], name, password,
+        sheetId: document.getElementById('ce-sheet-id').value.trim(),
+        period: document.getElementById('ce-period').value.trim(),
+        title: document.getElementById('ce-title').value.trim(),
+        author1Name: document.getElementById('ce-author1-name').value.trim(),
+        author1Title: document.getElementById('ce-author1-title').value.trim(),
+        author2Name: document.getElementById('ce-author2-name').value.trim(),
+        author2Title: document.getElementById('ce-author2-title').value.trim(),
+      };
+    }
+  } else {
+    const newClient = {
+      id: 'client_' + Date.now(),
+      name, password,
+      sheetId: document.getElementById('ce-sheet-id').value.trim(),
+      period: document.getElementById('ce-period').value.trim(),
+      title: document.getElementById('ce-title').value.trim(),
+      author1Name: document.getElementById('ce-author1-name').value.trim(),
+      author1Title: document.getElementById('ce-author1-title').value.trim(),
+      author2Name: document.getElementById('ce-author2-name').value.trim(),
+      author2Title: document.getElementById('ce-author2-title').value.trim(),
+    };
+    clients.push(newClient);
+  }
+  saveClients(clients);
+  toast('Client saved', 'success');
+  document.getElementById('ce-cancel').click();
+  renderClientList();
+
+  // Refresh header if editing current client
+  if (editingClientId && currentClient && editingClientId === currentClient.id) {
+    const updated = clients.find(c => c.id === editingClientId);
+    if (updated) {
+      currentClient = updated;
+      document.getElementById('hdr-title').textContent = updated.title || 'Google Search Snapshot Report';
+      document.getElementById('hdr-sub').textContent = updated.name || '—';
+      document.getElementById('period-text').textContent = updated.period;
+      applyFooter(updated);
+    }
+  }
+});
+
+document.getElementById('ce-delete').addEventListener('click', () => {
+  if (!editingClientId) return;
+  if (!confirm('Delete this client? This cannot be undone.')) return;
+  const clients = getClients().filter(c => c.id !== editingClientId);
+  saveClients(clients);
+  toast('Client deleted', '');
+  document.getElementById('ce-cancel').click();
+  renderClientList();
+});
+
+// ── CELL MAPPING TAB ──
+function populateMappingTab() {
+  const tbody = document.getElementById('mapping-tbody');
+  tbody.innerHTML = '';
+
+  if (!currentClient) {
+    document.getElementById('mapping-client-name').textContent = 'No client loaded';
+    return;
+  }
+  document.getElementById('mapping-client-name').textContent = currentClient.name;
+  const mapping = getMapping(currentClient.id);
+
+  // Group fields
+  let lastGroup = null;
+  FIELD_DEFS.forEach(def => {
+    if (def.group !== lastGroup) {
+      lastGroup = def.group;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="2" style="padding:12px 10px 4px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.25)">${escHtml(def.group)}</td>`;
+      tbody.appendChild(tr);
+    }
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escHtml(def.label)}</td>
+      <td><input class="map-input" data-field="${def.id}" value="${escHtml(mapping[def.id]||'')}" placeholder="e.g. Sheet1!B4"/></td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('mapping-save').addEventListener('click', () => {
+  if (!currentClient) { toast('No client loaded', 'error'); return; }
+  const mapping = {};
+  document.querySelectorAll('#mapping-tbody .map-input').forEach(input => {
+    const val = input.value.trim();
+    if (val) mapping[input.dataset.field] = val;
+  });
+  saveMapping(currentClient.id, mapping);
+  toast('Cell mapping saved', 'success');
+});
+
+document.getElementById('mapping-cancel').addEventListener('click', () => {
+  document.getElementById('settings-overlay').classList.remove('open');
+});
+
+// ── API KEYS TAB ──
+function populateApiKeys() {
+  const keys = getApiKeys();
+  document.getElementById('api-sheets-key').value = keys.sheetsApiKey || '';
+  document.getElementById('api-mapbox-token').value = keys.mapboxToken || '';
+}
+
+document.getElementById('api-save').addEventListener('click', () => {
+  const keys = {
+    sheetsApiKey: document.getElementById('api-sheets-key').value.trim(),
+    mapboxToken: document.getElementById('api-mapbox-token').value.trim(),
+  };
+  saveApiKeys(keys);
+  sheetsApiKey = keys.sheetsApiKey;
+  mapboxToken = keys.mapboxToken;
+  toast('API keys saved', 'success');
+
+  // Re-init maps if token added
+  if (mapboxToken && !mapImpressions) initMaps();
+});
+
+/* ══════════════════════════════════════
+   REFRESH BUTTON & LOGOUT
+══════════════════════════════════════ */
+document.getElementById('refresh-btn').addEventListener('click', () => {
+  fetchSheetData();
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => {
+  if (confirm('Sign out?')) logout();
+});
+
+}); // end DOMContentLoaded (settings + button wiring)
+
+/* ══════════════════════════════════════
+   UTILS
+══════════════════════════════════════ */
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function debounce(fn, ms) {
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+</script>
+</body>
+</html>
