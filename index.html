@@ -920,7 +920,7 @@ body::before{
             <div class="sp-field">
               <label class="sp-label">API Key</label>
               <input class="sp-input mono" id="api-sheets-key" placeholder="AIzaSy…" type="password" autocomplete="off"/>
-              <div class="sp-hint">Create a key at <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color:rgba(232,56,45,0.7)">Google Cloud Console</a>. Enable the Google Sheets API. Restrict the key to the Sheets API and your domain.</div>
+              <div class="sp-hint">A built-in key is deployed via GitHub Actions. Only enter a value here to override it for local testing.</div>
             </div>
           </div>
         </div>
@@ -930,7 +930,7 @@ body::before{
             <div class="sp-field">
               <label class="sp-label">Access Token</label>
               <input class="sp-input mono" id="api-mapbox-token" placeholder="pk.eyJ1…" type="password" autocomplete="off"/>
-              <div class="sp-hint">Get a free token at <a href="https://account.mapbox.com/access-tokens/" target="_blank" style="color:rgba(232,56,45,0.7)">mapbox.com</a>. The free tier covers typical agency reporting volumes.</div>
+              <div class="sp-hint">A built-in token is deployed via GitHub Actions. Only enter a value here to override it for local testing.</div>
             </div>
           </div>
         </div>
@@ -979,6 +979,10 @@ const FIELD_DEFS = [
 
 // ── STATE ──
 let currentClient = null;
+// Placeholder tokens are replaced by GitHub Actions at deploy time
+// Falls back to localStorage override if set (for local testing)
+const BUILT_IN_SHEETS_KEY   = '__SHEETS_API_KEY__';
+const BUILT_IN_MAPBOX_TOKEN = '__MAPBOX_TOKEN__';
 let sheetsApiKey = '';
 let mapboxToken = '';
 let mapImpressions = null;
@@ -992,8 +996,14 @@ const LS = {
   del: k => localStorage.removeItem(k),
 };
 
-// API keys — still localStorage (can't bootstrap from sheet they're used to read)
-function getApiKeys() { return LS.get('link_api_keys') || {}; }
+// API keys — localStorage overrides built-in keys (for local testing)
+function getApiKeys() {
+  const stored = LS.get('link_api_keys') || {};
+  return {
+    sheetsApiKey: stored.sheetsApiKey || BUILT_IN_SHEETS_KEY,
+    mapboxToken:  stored.mapboxToken  || BUILT_IN_MAPBOX_TOKEN,
+  };
+}
 function saveApiKeys(k) { LS.set('link_api_keys', k); }
 
 // Notes — localStorage per client (device-specific analyst edits)
@@ -2301,9 +2311,10 @@ function renderRegistryList() {
 
 // ── API KEYS TAB ──
 function populateApiKeys() {
-  const keys = getApiKeys();
-  document.getElementById('api-sheets-key').value = keys.sheetsApiKey || '';
-  document.getElementById('api-mapbox-token').value = keys.mapboxToken || '';
+  const stored = LS.get('link_api_keys') || {};
+  // Only show stored overrides — don't expose built-in keys in the UI
+  document.getElementById('api-sheets-key').value = stored.sheetsApiKey || '';
+  document.getElementById('api-mapbox-token').value = stored.mapboxToken || '';
 }
 
 document.getElementById('api-save').addEventListener('click', () => {
