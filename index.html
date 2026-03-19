@@ -34,8 +34,8 @@
 
 /* ── RESET ── */
 *{box-sizing:border-box;margin:0;padding:0}
-html{overflow-x:hidden;max-width:100%}
-body{font-family:var(--font-primary);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;max-width:100%}
+html,body{overflow-x:hidden;max-width:100%;width:100%}
+body{font-family:var(--font-primary);background:var(--bg);color:var(--text);min-height:100vh}
 button{font-family:var(--font-primary);cursor:pointer}
 input,textarea,select{font-family:var(--font-primary)}
 
@@ -468,8 +468,9 @@ body::before{
 
   /* KPI grid — 2 columns on tablet */
   .kpi-grid{grid-template-columns:1fr 1fr;gap:10px}
-  .kpi{height:148px;padding:18px 18px 14px}
-  .kpi-val{font-size:36px}
+  .kpi{height:158px;padding:16px 16px 12px;overflow:hidden}
+  .kpi-val{font-size:32px}
+  .kpi-tag{font-size:8px;letter-spacing:1px;white-space:normal;line-height:1.3;word-break:break-word}
 
   /* All 2-col and 3-col grids collapse to 1 column */
   .row-2{grid-template-columns:1fr}
@@ -478,6 +479,11 @@ body::before{
   /* Cards — remove fixed heights, let content breathe */
   .glass.card[style*="height"],
   .glass.note-card[style*="height"]{height:auto!important}
+
+  /* Prevent ALL elements from overflowing viewport */
+  *{max-width:100%;box-sizing:border-box}
+  img,canvas,iframe{max-width:100%}
+  .hdr,.pbar,.main,.report-footer,.wrap{width:100%;max-width:100vw}
 
   /* Note textareas */
   .note-textarea{min-height:120px}
@@ -533,9 +539,9 @@ body::before{
   .report-footer{flex-direction:column;align-items:flex-start;gap:12px}
   .footer-logo{align-self:flex-end}
 
-  /* Ensure nothing bleeds past viewport */
-  .glass,.card,.note-card,.kpi{max-width:100%;box-sizing:border-box}
-  .hdr,.pbar,.main,.report-footer{max-width:100vw}
+  /* KPI tags even smaller on phone */
+  .kpi-tag{font-size:7.5px}
+  .kpi{height:148px}
 }
 
 /* ── MAP TOGGLE (mobile only) ── */
