@@ -261,10 +261,12 @@ body::before{
 .donut-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;gap:16px}
 .dnut-wrap{position:relative;width:130px;height:130px;flex-shrink:0}
 .dnut-wrap canvas{width:130px!important;height:130px!important}
-.dleg{width:100%;display:flex;flex-direction:column;gap:6px;padding:0 4px}
-.dli{display:flex;align-items:center;gap:9px;font-size:11px;font-weight:600;color:var(--text-muted)}
-.dli-pct{margin-left:auto;font-size:10px;font-weight:800;color:var(--text);letter-spacing:-.3px}
-.dldt{width:9px;height:9px;border-radius:3px;flex-shrink:0}
+.dleg{width:100%;text-align:center;padding:0 4px}
+.dleg-table{border-collapse:collapse;table-layout:fixed;margin:0 auto;display:inline-table}
+.dleg-table td{width:62px;padding:3px 4px;font-size:10.5px;font-weight:600;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+.dleg-table td.dleg-pct{font-weight:800;color:var(--text);text-align:center}
+.dleg-table td.dleg-lbl{display:flex;align-items:center;gap:5px}
+.dldt{width:8px;height:8px;border-radius:2px;flex-shrink:0;display:inline-block}
 
 /* ── SPINNER ── */
 .spinner{
@@ -695,21 +697,21 @@ body::before{
     <div>
       <div class="sh"><div class="sh-bar"></div><h2>Campaign Demographic Data</h2><div class="sh-line"></div></div>
       <div class="row-3">
-        <div class="glass card" style="height:270px">
+        <div class="glass card" style="height:290px">
           <div class="ctitle ctitle-center">Gender Distribution</div>
           <div class="donut-body">
             <div class="dnut-wrap"><canvas id="donut-gender"></canvas></div>
             <div class="dleg" id="dleg-gender"></div>
           </div>
         </div>
-        <div class="glass card" style="height:270px">
+        <div class="glass card" style="height:290px">
           <div class="ctitle ctitle-center">Age Distribution</div>
           <div class="donut-body">
             <div class="dnut-wrap"><canvas id="donut-age"></canvas></div>
             <div class="dleg" id="dleg-age"></div>
           </div>
         </div>
-        <div class="glass card" style="height:270px">
+        <div class="glass card" style="height:290px">
           <div class="ctitle ctitle-center">Income Distribution</div>
           <div class="donut-body">
             <div class="dnut-wrap"><canvas id="donut-income"></canvas></div>
@@ -1347,23 +1349,29 @@ const DONUT_PALETTE = [
 ];
 
 function renderDonuts(genderData, ageData, incomeData) {
-  renderSingleDonut('donut-gender', 'dleg-gender', genderData || [
-    {label:'Male',pct:52},{label:'Female',pct:46},{label:'Unknown',pct:2}
-  ]);
+  renderSingleDonut('donut-gender', 'dleg-gender', (genderData || [
+    {label:'Male',pct:52},{label:'Female',pct:46}
+  ]).filter(d => d.label.toLowerCase() !== 'unknown'),
+    {cols:2, maxItems:2});
   renderSingleDonut('donut-age', 'dleg-age', ageData || [
     {label:'25–34',pct:28},{label:'35–44',pct:24},{label:'45–54',pct:18},{label:'18–24',pct:15},{label:'55+',pct:15}
-  ]);
+  ], {cols:4, maxItems:6});
   renderSingleDonut('donut-income', 'dleg-income', incomeData || [
     {label:'60–80th',pct:28},{label:'40–60th',pct:25},{label:'20–40th',pct:18},{label:'0–20th',pct:12},{label:'Top 10%',pct:17}
-  ]);
+  ], {cols:4, maxItems:6});
 }
 
-function renderSingleDonut(canvasId, legId, data) {
+function renderSingleDonut(canvasId, legId, data, opts) {
+  // opts: { cols: 2|4, rows: 2|3, maxItems: N }
+  const cols = (opts && opts.cols) || 4;
+  const maxItems = (opts && opts.maxItems) || 6;
+
   if (donutCharts[canvasId]) donutCharts[canvasId].destroy();
   const ctx = document.getElementById(canvasId).getContext('2d');
-  const labels = data.map(d => d.label);
-  const values = data.map(d => d.pct);
-  const colors = data.map((_, i) => DONUT_PALETTE[i % DONUT_PALETTE.length]);
+  const chartData = data.slice(0, maxItems);
+  const labels = chartData.map(d => d.label);
+  const values = chartData.map(d => d.pct);
+  const colors = chartData.map((_, i) => DONUT_PALETTE[i % DONUT_PALETTE.length]);
 
   donutCharts[canvasId] = new Chart(ctx, {
     type: 'doughnut',
@@ -1375,11 +1383,36 @@ function renderSingleDonut(canvasId, legId, data) {
     }
   });
 
-  // Legend
   const leg = document.getElementById(legId);
-  leg.innerHTML = data.slice(0,4).map((d, i) =>
-    `<div class="dli"><div class="dldt" style="background:${colors[i]}"></div><span>${escHtml(d.label)}</span><span class="dli-pct">${d.pct}%</span></div>`
-  ).join('');
+  const items = chartData.slice(0, maxItems);
+  let tableRows = '';
+
+  if (cols === 2) {
+    // 2-col table: label | pct — one item per row
+    tableRows = items.map((d, i) => `<tr>
+      <td class="dleg-lbl"><div class="dldt" style="background:${colors[i]}"></div>${escHtml(d.label)}</td>
+      <td class="dleg-pct">${d.pct}%</td>
+    </tr>`).join('');
+  } else {
+    // 4-col table: label | pct | label | pct — items split left/right
+    const half = Math.ceil(items.length / 2);
+    const padded = [...items];
+    while (padded.length < half * 2) padded.push({label:'', pct:''});
+    tableRows = Array.from({length: half}, (_, row) => {
+      const ai = row, bi = row + half;
+      const a = padded[ai], b = padded[bi];
+      const aLbl = a.label ? `<div class="dldt" style="background:${colors[ai]}"></div>${escHtml(a.label)}` : '';
+      const bLbl = b && b.label ? `<div class="dldt" style="background:${colors[bi]}"></div>${escHtml(b.label)}` : '';
+      return `<tr>
+        <td class="dleg-lbl">${aLbl}</td>
+        <td class="dleg-pct">${a.pct !== '' ? a.pct + '%' : ''}</td>
+        <td class="dleg-lbl">${bLbl}</td>
+        <td class="dleg-pct">${b && b.pct !== '' ? b.pct + '%' : ''}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  leg.innerHTML = `<table class="dleg-table"><tbody>${tableRows}</tbody></table>`;
 }
 
 /* ══════════════════════════════════════
