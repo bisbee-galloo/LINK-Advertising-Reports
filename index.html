@@ -420,6 +420,16 @@ body::before{
 .footer-logo:hover{border-color:rgba(232,56,45,0.5)}
 .footer-logo img{width:100%;height:100%;object-fit:contain;display:none}
 
+/* ── EMPTY STATES ── */
+.empty-state{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:8px;min-height:60px;
+}
+.empty-state-icon{font-size:18px;opacity:.25}
+.empty-state-msg{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-faint);text-align:center;line-height:1.6}
+.empty-state-hint{font-size:9.5px;color:var(--text-faint);opacity:.7;text-align:center}
+.kpi-val-empty{font-size:28px;font-weight:700;color:var(--text-faint);letter-spacing:-.5px}
+
 /* Mapbox popup styling */
 .map-popup .mapboxgl-popup-content{
   background:rgba(255,255,255,0.95);
@@ -1211,56 +1221,62 @@ function applySheetData(mapping, rangeIndex) {
 
   // Period
   const period = val('period');
-  if (period) {
-    document.getElementById('period-text').textContent = period;
-    // period only updates the period bar, not the header subtitle
-  }
+  document.getElementById('period-text').textContent = period || '—';
 
-  // Keywords
+  // Keywords — renderKeywordBars handles null/empty internally
   const kwRows = rows('kw_range');
-  if (kwRows && kwRows.length) renderKeywordBars(kwRows);
+  renderKeywordBars(kwRows);
 
-  // Zip bars
+  // Zip bars — renderZipBars handles null/empty internally
   const zipImpr = rows('zip_impr_range');
-  if (zipImpr && zipImpr.length) renderZipBars('zip-impressions-bars', zipImpr);
   const zipClicks = rows('zip_clicks_range');
-  if (zipClicks && zipClicks.length) {
-    renderZipBars('zip-clicks-bars', zipClicks);
+  renderZipBars('zip-impressions-bars', zipImpr);
+  renderZipBars('zip-clicks-bars', zipClicks);
+  if ((zipImpr && zipImpr.length) || (zipClicks && zipClicks.length)) {
     if (mapboxToken) updateMaps(zipImpr, zipClicks);
   }
 
-  // Demographics
+  // Demographics — renderDonuts handles null per-chart internally
   const genderRows = rows('demo_gender');
   const ageRows = rows('demo_age');
   const incomeRows = rows('demo_income');
-  if (genderRows || ageRows || incomeRows) {
-    renderDonuts(
-      genderRows ? parseDemo(genderRows) : null,
-      ageRows    ? parseDemo(ageRows)    : null,
-      incomeRows ? parseDemo(incomeRows) : null
-    );
-  }
+  renderDonuts(
+    genderRows ? parseDemo(genderRows) : null,
+    ageRows    ? parseDemo(ageRows)    : null,
+    incomeRows ? parseDemo(incomeRows) : null
+  );
 }
 
 function parseDemo(rows) {
-  return rows.map(r => ({label: r[0]||'', pct: parseFloat(r[1])||0})).filter(r => r.label);
+  return (rows || [])
+    .map(r => ({label: (r[0]||'').trim(), pct: parseFloat(r[1]) || 0}))
+    .filter(r => r.label && r.label !== '');
 }
 
 function setKpiVal(id, val) {
-  if (val !== null && val !== undefined) document.getElementById(id).textContent = val;
+  const el = document.getElementById(id);
+  if (val !== null && val !== undefined && String(val).trim() !== '') {
+    el.textContent = val;
+    el.className = 'kpi-val';
+  } else {
+    el.textContent = '—';
+    el.className = 'kpi-val kpi-val-empty';
+  }
 }
 
 function setKpiTrend(trendId, lblId, trendVal, lblVal, invert) {
   const el = document.getElementById(trendId);
   const lbl = document.getElementById(lblId);
-  if (trendVal) {
+  if (trendVal && String(trendVal).trim() !== '') {
     el.style.display = '';
     el.textContent = trendVal;
     const isDown = trendVal.includes('↓') || trendVal.startsWith('-');
-    // invert: down = good (green), up = bad (red) — used for CPC
     el.className = (invert ? !isDown : isDown) ? 'tdn' : 'tup';
+  } else {
+    el.style.display = 'none';
+    lbl.textContent = '';
   }
-  if (lblVal) lbl.textContent = lblVal;
+  if (lblVal && String(lblVal).trim() !== '') lbl.textContent = lblVal;
 }
 
 /* ══════════════════════════════════════
@@ -1291,8 +1307,13 @@ function setLastRefreshed() {
 function renderKeywordBars(kwRows) {
   const container = document.getElementById('kw-bar-list');
   container.innerHTML = '';
-  const max = Math.max(...kwRows.map(r => parseFloat(r[1])||0)) || 1;
-  kwRows.slice(0,10).forEach((row, i) => {
+  const validRows = (kwRows || []).filter(r => r[0] && (parseFloat(r[1]) > 0));
+  if (!validRows.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-msg">No keyword data</div><div class="empty-state-hint">Configure keyword range in Settings → Cell Mapping</div></div>';
+    return;
+  }
+  const max = Math.max(...validRows.map(r => parseFloat(r[1])||0)) || 1;
+  validRows.slice(0,10).forEach((row) => {
     const kw = row[0] || '';
     const clicks = parseFloat(row[1]) || 0;
     const pct = Math.round((clicks / max) * 100);
@@ -1315,8 +1336,13 @@ function renderKeywordBars(kwRows) {
 function renderZipBars(containerId, zipRows) {
   const container = document.getElementById(containerId);
   container.innerHTML = '';
-  const max = Math.max(...zipRows.map(r => parseFloat(r[1])||0)) || 1;
-  zipRows.slice(0,10).forEach((row, i) => {
+  const validRows = (zipRows || []).filter(r => r[0] && (parseFloat(r[1]) >= 0));
+  if (!validRows.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📍</div><div class="empty-state-msg">No geographic data</div><div class="empty-state-hint">Configure zip range in Settings → Cell Mapping</div></div>';
+    return;
+  }
+  const max = Math.max(...validRows.map(r => parseFloat(r[1])||0)) || 1;
+  validRows.slice(0,10).forEach((row) => {
     const zip = row[0] || '';
     const val = parseFloat(row[1]) || 0;
     const pct = Math.round((val / max) * 100);
@@ -1349,22 +1375,40 @@ const DONUT_PALETTE = [
 ];
 
 function renderDonuts(genderData, ageData, incomeData) {
-  renderSingleDonut('donut-gender', 'dleg-gender', (genderData || [
-    {label:'Male',pct:52},{label:'Female',pct:46}
-  ]).filter(d => d.label.toLowerCase() !== 'unknown'),
+  // Use placeholder data only on first load (no sheet connected yet)
+  // Once a sheet is connected, null means unmapped — show empty state
+  const hasSheet = !!(currentClient && currentClient.sheetId && sheetsApiKey);
+
+  const genderFallback = hasSheet ? null : [{label:'Male',pct:52},{label:'Female',pct:46}];
+  const ageFallback    = hasSheet ? null : [{label:'25–34',pct:28},{label:'35–44',pct:24},{label:'45–54',pct:18},{label:'18–24',pct:15},{label:'55+',pct:15}];
+  const incomeFallback = hasSheet ? null : [{label:'60–80th',pct:28},{label:'40–60th',pct:25},{label:'20–40th',pct:18},{label:'0–20th',pct:12},{label:'Top 10%',pct:17}];
+
+  renderSingleDonut('donut-gender', 'dleg-gender',
+    ((genderData || genderFallback) || []).filter(d => d.label.toLowerCase() !== 'unknown'),
     {cols:2, maxItems:2});
-  renderSingleDonut('donut-age', 'dleg-age', ageData || [
-    {label:'25–34',pct:28},{label:'35–44',pct:24},{label:'45–54',pct:18},{label:'18–24',pct:15},{label:'55+',pct:15}
-  ], {cols:4, maxItems:6});
-  renderSingleDonut('donut-income', 'dleg-income', incomeData || [
-    {label:'60–80th',pct:28},{label:'40–60th',pct:25},{label:'20–40th',pct:18},{label:'0–20th',pct:12},{label:'Top 10%',pct:17}
-  ], {cols:4, maxItems:6});
+  renderSingleDonut('donut-age',    'dleg-age',    ageData    || ageFallback,    {cols:4, maxItems:6});
+  renderSingleDonut('donut-income', 'dleg-income', incomeData || incomeFallback, {cols:4, maxItems:6});
 }
 
 function renderSingleDonut(canvasId, legId, data, opts) {
-  // opts: { cols: 2|4, rows: 2|3, maxItems: N }
   const cols = (opts && opts.cols) || 4;
   const maxItems = (opts && opts.maxItems) || 6;
+
+  if (donutCharts[canvasId]) { donutCharts[canvasId].destroy(); donutCharts[canvasId] = null; }
+
+  // Restore canvas if it was previously replaced by an empty state
+  const donutBody = document.getElementById(canvasId)
+    ? document.getElementById(canvasId).closest('.donut-body')
+    : document.getElementById(legId)?.closest('.donut-body');
+  if (donutBody && !document.getElementById(canvasId)) {
+    donutBody.innerHTML = `<div class="dnut-wrap"><canvas id="${canvasId}"></canvas></div><div class="dleg" id="${legId}"></div>`;
+  }
+
+  // Empty state — no data mapped or returned
+  if (!data || !data.length) {
+    if (donutBody) donutBody.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🍩</div><div class="empty-state-msg">No data</div><div class="empty-state-hint">Configure demographic range in Settings → Cell Mapping</div></div>';
+    return;
+  }
 
   if (donutCharts[canvasId]) donutCharts[canvasId].destroy();
   const ctx = document.getElementById(canvasId).getContext('2d');
