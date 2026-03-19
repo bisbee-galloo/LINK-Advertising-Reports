@@ -2099,19 +2099,24 @@ function _paintMap(map, geojson, rows, sourceId, labelPrefix) {
   if (!map || !rows) return;
 
   // Build value lookup: zip → numeric value
-  // Strip commas/currency symbols that break parseFloat (e.g. "14,980" → 14980)
   const cleanNum = v => parseFloat(String(v).replace(/[$,\s]/g, '')) || 0;
   const valMap = {};
-  rows.forEach(r => { valMap[String(r[0]).padStart(5,'0')] = cleanNum(r[1]); });
+  rows.forEach(r => {
+    const zip = String(r[0]).padStart(5,'0');
+    const val = cleanNum(r[1]);
+    valMap[zip] = val;
+  });
   const max = Math.max(...Object.values(valMap)) || 1;
-  console.log('[Map] valMap:', valMap, '| max:', max);
+  console.log('[Map ' + sourceId + '] valMap zips:', Object.keys(valMap), '| max:', max);
 
   // Attach value to each feature as a property
   const painted = {
     type: 'FeatureCollection',
     features: geojson.features.map(f => {
       const zip = String(f.properties.ZCTA5 || f.properties.GEOID || f.properties.ZCTA5CE || f.properties.zip || '').padStart(5,'0');
-      return { ...f, properties: { ...f.properties, _zip: zip, _val: valMap[zip] || 0 } };
+      const val = valMap[zip] || 0;
+      if (val === 0 && Object.keys(valMap).length > 0) console.log('[Map ' + sourceId + '] zip', zip, 'not in valMap — available:', Object.keys(valMap).slice(0,3));
+      return { ...f, properties: { ...f.properties, _zip: zip, _val: val } };
     })
   };
 
