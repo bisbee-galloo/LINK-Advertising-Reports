@@ -1207,7 +1207,7 @@ function applySheetData(mapping, rangeIndex) {
   setKpiVal('kpi-ctr', val('kpi_ctr'));
   setKpiTrend('kpi-ctr-trend', 'kpi-ctr-tlbl', val('kpi_ctr_trend'), val('kpi_tlbl'));
   setKpiVal('kpi-cpc', val('kpi_cpc'));
-  setKpiTrend('kpi-cpc-trend', 'kpi-cpc-tlbl', val('kpi_cpc_trend'), val('kpi_tlbl'));
+  setKpiTrend('kpi-cpc-trend', 'kpi-cpc-tlbl', val('kpi_cpc_trend'), val('kpi_tlbl'), true);
 
   // Period
   const period = val('period');
@@ -1250,15 +1250,15 @@ function setKpiVal(id, val) {
   if (val !== null && val !== undefined) document.getElementById(id).textContent = val;
 }
 
-function setKpiTrend(trendId, lblId, trendVal, lblVal) {
+function setKpiTrend(trendId, lblId, trendVal, lblVal, invert) {
   const el = document.getElementById(trendId);
   const lbl = document.getElementById(lblId);
   if (trendVal) {
     el.style.display = '';
     el.textContent = trendVal;
-    // Detect direction from value string
     const isDown = trendVal.includes('↓') || trendVal.startsWith('-');
-    el.className = isDown ? 'tdn' : 'tup';
+    // invert: down = good (green), up = bad (red) — used for CPC
+    el.className = (invert ? !isDown : isDown) ? 'tdn' : 'tup';
   }
   if (lblVal) lbl.textContent = lblVal;
 }
