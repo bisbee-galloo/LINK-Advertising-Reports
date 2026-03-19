@@ -979,10 +979,11 @@ const FIELD_DEFS = [
 
 // ── STATE ──
 let currentClient = null;
-// Placeholder tokens are replaced by GitHub Actions at deploy time
-// Falls back to localStorage override if set (for local testing)
-const BUILT_IN_SHEETS_KEY   = '__SHEETS_API_KEY__';
-const BUILT_IN_MAPBOX_TOKEN = '__MAPBOX_TOKEN__';
+// !! REPLACE THESE WITH YOUR ACTUAL KEYS !!
+// Google Sheets API key (restricted to your domain in Google Cloud Console)
+const BUILT_IN_SHEETS_KEY   = 'AIzaSyAOdcfK2ObwJJhB4kAKPJjhivvCTEJvuqs';
+// Mapbox token (restricted to your domain in Mapbox account)
+const BUILT_IN_MAPBOX_TOKEN = 'pk.eyJ1IjoiYnN0ZXJuIiwiYSI6ImNtbXhyamJ0eTM3NXAzM3B2c2Y0dWlwb3UifQ.BUqUZKiFEliLCymnGB02Xg';
 let sheetsApiKey = '';
 let mapboxToken = '';
 let mapImpressions = null;
