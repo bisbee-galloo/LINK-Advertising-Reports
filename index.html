@@ -1051,8 +1051,10 @@ const CONFIG_FIELD_MAP = {
 // ── FETCH CONFIG FROM SHEET ──
 async function fetchClientConfig(sheetId) {
   if (!sheetsApiKey) throw new Error('No API key configured');
-  const range = '_config!A:C';
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?key=${sheetsApiKey}`;
+
+  // Step 1: Read _config!A:B — column A is the label, column B is the range reference
+  const configRange = '_config!A:B';
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(configRange)}?key=${sheetsApiKey}`;
   const res = await fetch(url);
   if (!res.ok) {
     const err = await res.json();
@@ -1061,14 +1063,50 @@ async function fetchClientConfig(sheetId) {
   const data = await res.json();
   const rows = data.values || [];
 
-  // Build config object from column A (label) → column C (value)
-  const config = { sheetId };
+  // Build label → range reference map from A:B
+  // Skip rows where column B is blank, n/a, or not a valid range reference
+  const isValidRef = v => v && v.trim() && !['n/a','na','none','-'].includes(v.trim().toLowerCase());
+  const labelToRange = {};
   rows.forEach(row => {
     const label = (row[0] || '').trim();
-    const value = (row[2] || '').trim(); // Column C
+    const ref   = (row[1] || '').trim();
     const field = CONFIG_FIELD_MAP[label];
-    if (field && value) config[field] = value;
+    if (field && isValidRef(ref)) labelToRange[field] = ref;
   });
+
+  if (!Object.keys(labelToRange).length) {
+    throw new Error('No valid config fields found in _config tab');
+  }
+
+  // Step 2: Batch-fetch all the referenced ranges to get actual values
+  const uniqueRanges = [...new Set(Object.values(labelToRange))];
+  const batchUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchGet?${
+    uniqueRanges.map(r => 'ranges=' + encodeURIComponent(r)).join('&')
+  }&key=${sheetsApiKey}`;
+
+  const batchRes = await fetch(batchUrl);
+  if (!batchRes.ok) {
+    const err = await batchRes.json();
+    throw new Error(err.error?.message || 'Failed to fetch config values');
+  }
+  const batchData = await batchRes.json();
+
+  // Build range → first cell value lookup
+  const rangeValues = {};
+  (batchData.valueRanges || []).forEach((vr, i) => {
+    const val = vr.values?.[0]?.[0] ?? '';
+    rangeValues[uniqueRanges[i]] = String(val).trim();
+  });
+
+  // Step 3: Build final config object
+  const config = { sheetId };
+  Object.entries(labelToRange).forEach(([field, ref]) => {
+    const value = rangeValues[ref];
+    if (value && !['n/a','na','none','-'].includes(value.toLowerCase())) {
+      config[field] = value;
+    }
+  });
+
   return config;
 }
 
@@ -1291,7 +1329,6 @@ async function fetchSheetData() {
   if (!currentClient || !sheetsApiKey || !currentClient.sheetId) return;
 
   // Build mapping from client config object (loaded from _config sheet tab)
-  // Fields matching FIELD_DEFS ids are cell range values
   const MAPPING_FIELDS = [
     'kpi_clicks','kpi_clicks_trend','kpi_impr','kpi_impr_trend',
     'kpi_ctr','kpi_ctr_trend','kpi_cpc','kpi_cpc_trend','kpi_tlbl',
@@ -1300,7 +1337,7 @@ async function fetchSheetData() {
   ];
   const mapping = {};
   MAPPING_FIELDS.forEach(f => {
-    if (currentClient[f]) mapping[f] = currentClient[f];
+    if (currentClient[f]) mapping[f] = currentClient[f].trim();
   });
 
   if (!Object.keys(mapping).length) {
