@@ -871,8 +871,8 @@ body::before{
   <!-- FOOTER -->
   <div class="report-footer">
     <div class="footer-text">
-      <div class="footer-authorized">Report Authorized for</div>
-      <div class="footer-client" id="footer-client">—</div>
+      <div class="footer-authorized">Report Authorized by</div>
+      <div class="footer-client" id="footer-client">LINK Strategic Partners</div>
       <div class="footer-authors" id="footer-authors"> </div>
     </div>
     <div class="footer-logo" id="footer-logo-box" title="Click to upload agency logo">
@@ -1128,15 +1128,27 @@ async function fetchClientConfig(sheetId) {
     }
     const batchData = await batchRes.json();
 
-    // Build range → value lookup
+    // Build range → value lookup using both index and returned range name for reliability
     const rangeValues = {};
     (batchData.valueRanges || []).forEach((vr, i) => {
-      rangeValues[valueRanges[i]] = String(vr.values?.[0]?.[0] ?? '').trim();
+      // Map by index (primary) and by normalized returned range (fallback)
+      const val = String(vr.values?.[0]?.[0] ?? '').trim();
+      if (valueRanges[i]) rangeValues[valueRanges[i]] = val;
+      // Also store by the range string Google returns (may differ in casing/sheet name format)
+      if (vr.range) {
+        // Extract just the cell ref part after the ! 
+        const returnedRef = vr.range;
+        rangeValues[returnedRef] = val;
+        // Also store without sheet prefix in case of mismatch
+        const cellOnly = returnedRef.includes('!') ? returnedRef.split('!').pop() : returnedRef;
+        rangeValues[cellOnly] = val;
+      }
     });
 
-    // Assign resolved values to config
+    // Assign resolved values to config — try multiple range key formats
     Object.entries(toResolve).forEach(([field, ref]) => {
-      const value = rangeValues[ref];
+      const cellOnly = ref.includes('!') ? ref.split('!').pop() : ref;
+      const value = rangeValues[ref] || rangeValues[cellOnly] || '';
       if (value && !['n/a','na','none','-'].includes(value.toLowerCase())) {
         config[field] = value;
       }
@@ -1316,7 +1328,7 @@ window.addEventListener('DOMContentLoaded', async () => {
    FOOTER
 ══════════════════════════════════════ */
 function applyFooter(client) {
-  document.getElementById('footer-client').textContent = client.name || '—';
+  document.getElementById('footer-client').textContent = 'LINK Strategic Partners';
   const a1n = client.author1Name || '';
   const a1t = client.author1Title || '';
   const a2n = client.author2Name || '';
