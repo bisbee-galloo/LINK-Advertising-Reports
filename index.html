@@ -782,7 +782,7 @@ body::before{
       </div>
     </div>
 
-    <!-- GEOGRAPHIC — MAPS -->
+    <!-- GEOGRAPHIC — MAPS + BAR CHARTS PAIRED -->
     <div>
       <div class="sh"><div class="sh-bar"></div><h2>Geographic Performance</h2><div class="sh-line"></div></div>
       <!-- Mobile toggle — only visible on small screens -->
@@ -790,41 +790,41 @@ body::before{
         <button class="map-toggle-btn active" id="map-toggle-clicks" onclick="showMap('clicks')">Ad Clicks</button>
         <button class="map-toggle-btn" id="map-toggle-impressions" onclick="showMap('impressions')">Ad Impressions</button>
       </div>
-      <div class="row-2" id="map-row">
-        <div class="map-panel" id="map-panel-clicks">
-          <div class="glass card" style="height:360px">
+
+      <!-- Clicks row: map + bar chart paired -->
+      <div class="map-panel" id="map-panel-clicks" style="margin-bottom:14px">
+        <div class="row-2">
+          <div class="glass card" style="height:320px">
             <div class="ctitle">Ad Clicks By Zip Code (1.1)</div>
             <div class="map-body map-placeholder" id="map-clicks">
               <div class="map-placeholder-icon">🗺</div>
               <div class="map-placeholder-text">Mapbox · Clicks Heat</div>
             </div>
           </div>
+          <div class="glass card" style="height:320px">
+            <div class="ctitle">Ad Clicks By Zip Code (1.2)</div>
+            <div class="bar-list" id="zip-clicks-bars">
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-faint)">No data</div>
+            </div>
+          </div>
         </div>
-        <div class="map-panel" id="map-panel-impressions">
-          <div class="glass card" style="height:360px">
+      </div>
+
+      <!-- Impressions row: map + bar chart paired -->
+      <div class="map-panel" id="map-panel-impressions">
+        <div class="row-2">
+          <div class="glass card" style="height:320px">
             <div class="ctitle">Ad Impressions By Zip Code (1.1)</div>
             <div class="map-body map-placeholder" id="map-impressions">
               <div class="map-placeholder-icon">🗺</div>
               <div class="map-placeholder-text">Mapbox · Impressions Heat</div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ZIP BAR CHARTS -->
-    <div>
-      <div class="row-2">
-        <div class="glass card" style="height:300px">
-          <div class="ctitle">Ad Clicks By Zip Code (1.2)</div>
-          <div class="bar-list" id="zip-clicks-bars">
-            <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-faint)">No data</div>
-          </div>
-        </div>
-        <div class="glass card" style="height:300px">
-          <div class="ctitle">Ad Impressions By Zip Code (1.2)</div>
-          <div class="bar-list" id="zip-impressions-bars">
-            <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-faint)">No data</div>
+          <div class="glass card" style="height:320px">
+            <div class="ctitle">Ad Impressions By Zip Code (1.2)</div>
+            <div class="bar-list" id="zip-impressions-bars">
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-faint)">No data</div>
+            </div>
           </div>
         </div>
       </div>
@@ -2380,16 +2380,16 @@ document.getElementById('logout-btn').addEventListener('click', () => {
 ══════════════════════════════════════ */
 function showMap(which) {
   const isMobile = window.innerWidth <= 768;
-  if (!isMobile) return; // no-op on desktop
+  if (!isMobile) return; // no-op on desktop — both rows always visible
   ['clicks','impressions'].forEach(type => {
     const panel = document.getElementById('map-panel-' + type);
     const btn = document.getElementById('map-toggle-' + type);
     if (panel) panel.classList.toggle('hidden', type !== which);
     if (btn) btn.classList.toggle('active', type === which);
   });
-  // Resize the visible map so it fills its container correctly
+  // Resize the visible map so tiles fill the container correctly
   const map = which === 'clicks' ? mapClicks : mapImpressions;
-  if (map) setTimeout(() => map.resize(), 50);
+  if (map) setTimeout(() => map.resize(), 80);
 }
 
 // On resize, reset both panels to visible if returning to desktop
